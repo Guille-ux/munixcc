@@ -14,5 +14,6 @@
 
 #include <stdlib.h> // para malloc y free
 #include <string.h> // para memcpy, memset y strcmp
+#include <ctype.h> // necesario
 
 #endif
