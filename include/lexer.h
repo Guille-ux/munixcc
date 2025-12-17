@@ -17,5 +17,6 @@
 // funciones auxiliares
 bool munixccPattern(const char *pattern);
 TokenC newTokC(char *start, size_t len, int line, TokenTypeC type);
+bool munixccLex(const char *text, TokenC *tokens, size_t max_tokens);
 
 #endif
