@@ -165,7 +165,7 @@ static TokenC getNextToken(void) {
 			return newTokC(start, 2, g_line, C_TOKEN_MUL_ASSIGN);
 		} else {
 			cursor--;
-			return newTokC(start, 1, g_line, C_TOKEN_DOT);
+			return newTokC(start, 1, g_line, C_TOKEN_STAR);
 		}
 	} else if (*cursor=='/') {
 		char ch=peekChar();

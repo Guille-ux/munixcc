@@ -85,7 +85,7 @@ typedef enum {
 	C_TOKEN_TERNARY,
 	C_TOKEN_ADD,
 	C_TOKEN_SUB,
-	C_TOKEN_DOT, // *
+	C_TOKEN_STAR, // *
 	C_TOKEN_DIV,
 	C_TOKEN_BANG,
 	C_TOKEN_AND,
