@@ -15,7 +15,7 @@ void mcc_CreateNewStruct(const char *name, ...) {
 	memcpy(newStruct->name, name, len);
 	MCCStructMember *cmember;
 	while (1) {
-		cmember = va_arg(args, MCCStructMemeber*);
+		cmember = va_arg(args, MCCStructMember*);
 		if (cmember == NULL ||
 		    newStruct->num_members > MCC_STRUCT_MAX_MEMBERS)
 		{ // llego a su final
@@ -30,7 +30,7 @@ void mcc_CreateNewStruct(const char *name, ...) {
 }
 
 MCCStructDef *mcc_FindStruct(const char *name) {
-	size_t len = MCC_MAX_SYMBOL_NAME;
+	size_t len = MCC_STRUCT_MAX_NAME;
 	MCCStructDef *def=NULL;
 	MCCStructDef *defs=CStructTable.structs;
 	for (size_t i = 0;i<CStructTable.current_struct;i++) {
@@ -42,12 +42,12 @@ MCCStructDef *mcc_FindStruct(const char *name) {
 	return def;
 }
 
-MCCStructMember *mcc_FindMember(const char *name, MCCStructDef *struct) {
-	size_t len = MCC_MAX_SYMBOL_NAME;
+MCCStructMember *mcc_FindMember(const char *name, MCCStructDef *truct) {
+	size_t len = MCC_STRUCT_MAX_NAME;
 	MCCStructMember *member;
 	for (size_t i=0;i<MCC_STRUCT_MAX_MEMBERS;i++) {
-		if (strncmp(name, struct->members[i].name, len)==0) {
-			member = &struct->members[i];
+		if (strncmp(name, truct->members[i].name, len)==0) {
+			member = &truct->members[i];
 			break;
 		}
 	}

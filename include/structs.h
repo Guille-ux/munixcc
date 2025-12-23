@@ -39,6 +39,6 @@ void mcc_CreateNewStruct(const char *name, ...); // el último argumento
 						 // la función
 
 MCCStructDef *mcc_FindStruct(const char *name);
-MCCStructMember *mcc_FindMember(const char *name, MCCStructDef *struct);
+MCCStructMember *mcc_FindMember(const char *name, MCCStructDef *truct);
 
 #endif
