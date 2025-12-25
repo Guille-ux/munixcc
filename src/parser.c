@@ -68,11 +68,35 @@ static int parseUnary(TokenC *tokens, BufferI *buffer) {
 
 }
 
-// TODO: COMPROBAR QUE OR Y AND FUNCIONAN ASÍ
+// NOTA, RECORDAR QUE EN MUNIXCC SI USAS BOOLEANOS TIENES QUE PASAR BOOLEAN
+
+/*
+ * PRECEDENCIA DE OPERACIONES EN MUNIXCC
+ *
+ * (de menor a mayor precedencia)
+ *
+ * OperadoresLógicos : &, ^, |, ||, &&, ==, !=, <, >, >= y <=
+ * Operadores de Adición : +, -, >> y <<
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ */
+
 static int parseLogical(TokenC *tokens, BufferI *buffer) {
 	parseAdditive(tokens, buffer);
-	while  (peek(tokens)->type == C_TOKEN_AND ||
-		peek(tokens)->type == C_TOKEN_OR ||
+	while  (peek(tokens)->type == C_TOKEN_AND || C_TOKEN_BYTEWISE_AND ||
+		peek(tokens)->type == C_TOKEN_OR || C_TOKEN_BYTEWISE_OR ||
+		peek(tokens)->type == C_TOKEN_BYTEWISE_XOR ||
 		peek(tokens)->type == C_TOKEN_EQUAL ||
 		peek(tokens)->type == C_TOKEN_LESS ||
 		peek(tokens)->type == C_TOKEN_GREATER ||
@@ -98,16 +122,18 @@ static int parseLogical(TokenC *tokens, BufferI *buffer) {
 		// ahora distinguimos la operación
 		switch (tok->type) {
 			case C_TOKEN_AND:
+			case C_TOKEN_BYTEWISE_AND:
 				// comparamos con and
-				buffer->emitText(buffer, "and ecx, eax\n");
-				// movemos 1 a eax en caso de que ambos true
-				buffer->emitText(buffer, "cmovz eax, 0d1\n");
+				buffer->emitText(buffer, "and eax, ecx\n");
 				break;
 			case C_TOKEN_OR:
+			case C_TOKEN_BYTEWISE_OR:
 				// comparamos con or
-				buffer->emitText(buffer, "or ecx, eax\n");
-				// movemos 1 a eax si alguno era true
-				buffer->emitText(buffer, "cmovz eax, 0d1\n");
+				buffer->emitText(buffer, "or eax, ecx\n");
+				break;
+			case C_TOKEN_BYTEWISE_XOR:
+				// comparamos con xor
+				buffer->emitText(buffer, "xor ecx, eax\n");
 				break;
 			case C_TOKEN_EQUAL:
 				// hace comparación usando cmp
@@ -146,8 +172,6 @@ static int parseLogical(TokenC *tokens, BufferI *buffer) {
 				buffer->emitText(buffer, "cmovl eax, 0d1\n");
 				// hacemos or
 				buffer->emitText(buffer, "or eax, ecx\n");
-				// si alguno era movemos 1 a eax
-				buffer->emitText(buffer, "cmovz eax, 0d1\n");
 				break;
 			case C_TOKEN_GREATER_EQUAL:
 				// primero comparamos
@@ -158,8 +182,6 @@ static int parseLogical(TokenC *tokens, BufferI *buffer) {
 				buffer->emitText(buffer, "cmovl eax, 0d1\n");
 				// hacemos or
 				buffer->emitText(buffer, "or eax, ecx\n");
-				// si alguno era movemos 1 a eax
-				buffer->emitText(buffer, "cmovz eax, 0d1\n");
 				break;
 		}
 
@@ -168,7 +190,52 @@ static int parseLogical(TokenC *tokens, BufferI *buffer) {
 	return 0;
 }
 static int parseAdditive(TokenC *tokens, BufferI *buffer) {
+	if (parseMultiplicative(tokens, buffer)!=0) /* ERROR */;
+	while  (peek(tokens)->type == C_TOKEN_ADD ||
+		peek(tokens)->type == C_TOKEN_SUB ||
+		peek(tokens)->type == C_TOKEN_RIGHT_SHIFT ||
+		peek(tokens)->type == C_TOKEN_LEFT_SHIFT) {
+	
+		buffer->emitText(buffer, "push eax\n"); // dejamos eax en stack
 
+		TokenC *tok = eat(tokens);
+
+		// llamamos a parseMultiplicative para que haga el siguiente
+		// cálculo
+		if (parseMultiplicative(tokens, buffer)!=0) /* ERROR */;
+		
+		// extraemos el operando izquierdo del stack
+		buffer->emitText(buffer, "pop ecx\n");
+		
+		// recuerda que el resultado debe acabar en eax
+		switch (tok->type) {
+			case C_TOKEN_ADD:
+				// HACEMOS SUMA
+				buffer->emitText(buffer, "add eax, ecx\n");
+				break;
+			case C_TOKEN_SUB:
+				// hacemos la resta, recuerda ecx - eax
+				// ecx es el izquierdo
+				buffer->emitText(buffer, "sub ecx, eax\n");
+				// movemos resultado a eax
+				buffer->emitText(buffer, "mov eax, ecx\n");
+				break;
+			case C_TOKEN_RIGHT_SHIFT:
+				// hacemos shift hacia derecha
+				buffer->emitText(buffer, "shr ecx, eax\n");
+				// movemos el resultado a eax
+				buffer->emitText(buffer, "mov eax, ecx\n");
+				break;
+			case C_TOKEN_LEFT_SHIFT:
+				// hacemos shift a la izquierda
+				buffer->emitText(buffer, "shl ecx, eax\n");
+				// movemos resultado a eax
+				buffer->emitText(buffer, "mov eax, ecx\n");
+				break;
+		}
+
+	}
+	return 0;
 }
 static int parseMultiplicative(TokenC *tokens, BufferI *buffer) {
 
