@@ -130,6 +130,8 @@ typedef enum {
 	C_TOKEN_U8,
 	C_TOKEN_I8,
 
+	C_TOKEN_AS, // para ahorrarme dolores de cabeza cuando haya casts
+
 	// cosas internas
 	C_TOKEN_INTERN_NULL, // un error en lexing básicamente
 

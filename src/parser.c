@@ -27,6 +27,8 @@ static TokenC *peek(TokenC *tokens) { // te devuelve el actual sin avanzar
 }
 
 int mcc_parse_program(TokenC *tokens, BufferI *buffer) {
+	tok_index = 0;
+	label = 0;
 	while (tokens[i].type!=TOKEN_EOF) {
 		// llamamos a parse statement
 		if (parseStatement(tokens, buffer) != 0) {
@@ -61,12 +63,7 @@ static int parseStatement(TokenC *tokens, BufferI buffer) {
 static int parseExpression(TokenC *tokens, BufferI *buffer) {
 	return parseLogical(TokenC *tokens, BufferI *buffer);
 }
-static int parsePrimary(TokenC *tokens, BufferI *buffer) {
 
-}
-static int parseUnary(TokenC *tokens, BufferI *buffer) {
-
-}
 
 // NOTA, RECORDAR QUE EN MUNIXCC SI USAS BOOLEANOS TIENES QUE PASAR BOOLEAN
 
@@ -77,9 +74,9 @@ static int parseUnary(TokenC *tokens, BufferI *buffer) {
  *
  * OperadoresLógicos : &, ^, |, ||, &&, ==, !=, <, >, >= y <=
  * Operadores de Adición : +, -, >> y <<
- *
- *
- *
+ * Operadores de Multiplicación : *, /, %
+ * Operadores Unarios : -, *, !, ~
+ * Expresiones primarias: &num, (), l-value....
  *
  *
  *
@@ -238,6 +235,154 @@ static int parseAdditive(TokenC *tokens, BufferI *buffer) {
 	return 0;
 }
 static int parseMultiplicative(TokenC *tokens, BufferI *buffer) {
+	if (parseUnary(tokens, buffer)!=0) /*ERROR*/;
+	while  (peek(tokens)->type == C_TOKEN_STAR ||
+		peek(tokens)->type == C_TOKEN_DIV ||
+		peek(tokens)->type == C_TOKEN_MOD) {
+		
+		// empujamos el resultado
+		buffer->emitText(buffer, "push eax\n");
 
+		TokenC *tok = eat(tokens);
+		if (parseUnary(tokens, buffer)!=0) /*ERROR*/;
+		// bajamos el operando izquierdo
+		buffer->emitText(buffer, "pop ecx\n");
+		switch (tok->type) {
+			case C_TOKEN_STAR:
+				// hacemos multiplicación
+				// como se guarda en eax, ahí se acaba
+				// el trabajo
+				buffer->emitText(buffer, "imul ecx\n");
+				break;
+			case C_TOKEN_DIV:
+				// primero intercambiamos ecx con eax
+				// es por como funciona la división
+				buffer->emitText(buffer, "push ecx\n");
+				buffer->emitText(buffer, "mov ecx, eax\n");
+				buffer->emitText(buffer, "pop eax\n");
+				// hacemos división
+				// esto es más difícil
+				// porque en imul el resultado se guarda
+				// en EDX:EAX siendo EDX la parte alta
+				// aqui como es la inversa
+				// hay que pasar hacer mov a EDX de eax
+				// y luego usar SAR para llenarlo del signo
+				// entonces, usaria CDQ si lo tuviese
+				// pero no lo tengo
+				buffer->emitText(buffer, "mov edx, eax\n");
+				buffer->emitText(buffer, "sar edx, 0d31\n");
+				// ahora ya podemos dividir
+				buffer->emitText(buffer, "idiv ecx\n");
+				break;
+			case C_TOKEN_MOD:
+				// toca hacer un poco lo de antes, pero nos llevaremos el resto
+				// primero intercambiar ECX con EAX
+				buffer->emitText(buffer, "push eax\n");
+				buffer->emitText(buffer, "mov eax, ecx\n");
+				buffer->emitText(buffer, "pop ecx\n");
+				// ahora tenemos que preparar edx
+				buffer->emitText(buffer, "mov edx, eax\n");
+				buffer->emitText(buffer, "sar edx, 0d31\n");
+				// ahora dividimos
+				buffer->emitText(buffer, "idiv ecx\n");
+				// y ahora, finalmente movemos el resto a eax
+				buffer->emitText(buffer, "mov eax, edx\n");
+				break;
+		}
+
+	}
+	return 0;
+}
+
+static int parseUnary(TokenC *tokens, BufferI *buffer) {
+	TokenC *tok = eat(tokens);
+	switch (tok->type) {
+		case C_TOKEN_STAR: // desreferenciación
+			// movemos el contenido de la dirección de eax en eax
+			buffer->emitText(buffer, "mov eax, Meax\n");
+			break;
+		case C_TOKEN_SUB: // cambiarle signo
+			// solo usamos neg y ya
+			buffer->emitText(buffer, "neg eax\n");
+			break;
+		case C_TOKEN_BANG: // cambiar de true a false y viceversa
+		case C_TOKEN_BYTEWISE_NOT: // hacer not
+			// el lógico y el bytewise van en el mismo
+			// si quieres booleanos usa booleanos
+			buffer->emitText(buffer, "not eax\n");
+			break;
+		default: // continuamos con nuestra vida
+			parsePrimary(tokens, buffer);
+			tok_index--;
+			return 0;
+	}
+
+	parseUnary(tokens, buffer); // tiene que ser recursivo
+	return 0;
+}
+
+// remember
+/*
+ * typedef struct {
+ *	TokenTypeC type;
+ *	char *start;
+ *	size_t len;
+ *	int line;
+ * } TokenC;
+ */
+
+static int parsePrimary(TokenC *tokens, BufferI *buffer) {
+	TokenC *tok = eat(tokens);
+	switch (tok->type) {
+		case C_TOKEN_LEFT_PAREN:
+			parseExpression(tokens, buffer);
+			if (eat(tokens)->type != C_TOKEN_RIGHT_PAREN) {
+				// ERROR, btw
+				// idk, just say something
+				return -1;
+			}
+			break;
+		case C_TOKEN_NUMBER:
+			// mov the number to eax
+			buffer->emitText(buffer, "mov eax, ");
+			// trying to make this work
+			{
+			char *tmp = (char*)malloc(tok->len+2);
+			memcpy(tmp, tok->start, tok->len);
+			tmp[tok->len]='\n';
+			tmp[tok->len+1]='\0';
+			buffer->emitText(buffer, tmp);
+			free(tmp); // i have almost forgotten that!
+			}
+			break;
+		case C_TOKEN_DECIMAL:
+			// idk, just tell that float and double aren't
+			// supported yet.
+			return -1;
+		case C_TOKEN_IDENTIFIER:
+			// something that handles_identifiers i guess.
+			tok_index--;
+			return handle_identifier(tokens, buffer);
+		case C_TOKEN_BYTEWISE_AND:
+			// similar
+			tok_index--;
+			return handle_address(tokens, buffer);
+		case C_TOKEN_CHARACTER:
+			// something like the other, but this time is easier
+			// i guess
+			buffer->emitText(buffer, "mov eax, ");
+			{
+			char *tmp = (char*)malloc(tok->len+2);
+			memcpy(tmp, tok->start, tok->len);
+			tmp[tok->len]='\n';
+			tmp[tok->len+1]='\0';
+			buffer->emitText(buffer, tmp);
+			free(tmp);
+			}
+			// oh, it's the same
+			break;
+
+	}
+	return 0;
 }
 

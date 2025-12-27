@@ -54,4 +54,49 @@ MCC_Var *mcc_find_var(char *name) {
 		}
 	}
 	return (MCC_Var*)NULL;
-} 
+}
+
+int handle_identifier(TokenC *tokens, BufferI *buffer) {
+	handle_address(tokens, buffer);
+	buffer->emitText(buffer, "mov eax, Meax\n");
+	return 0;
+}
+// lo siento operadores prefix
+int handle_address(TokenC *tokens, BufferI *buffer) {
+	MCC_Var *var;
+	TokenC *tok = eat(tokens);
+	TokenC *next = eat(tokens);
+	
+	// formateando el token
+	char *tmp = (char*)malloc(tok->len+1);
+	memcpy(tmp, tok->start, tok->len);
+	tmp[tok->len] = '\0';
+
+	var = mcc_find_var(tmp);
+	size_t size = var->size;
+
+	free(tmp);
+
+	if (var->global) {
+		buffer->emitText(buffer, "loax ");
+		char *tmp = (char*)malloc(MCC_MAX_SYMBOL_NAME+1);
+		buffer->emitText(buffer, );
+	} else {
+
+	}
+
+	if (next->type == C_TOKEN_LEFT_PAREN) {
+	// function.. oh
+	} else if (next->type == C_TOKEN_LEFT_BRACKET) {
+	// NOOOOO
+	} else if (next->type == C_TOKEN_DOT) {
+
+	} else if (next->type == C_TOKEN_ARROW) {
+
+	} else if (next->type == C_TOKEN_POSTFIX_ADD) {
+
+	} else if (next->type == C_TOKEN_POSTFIX_SUB) {
+
+	}
+	return 0;
+}

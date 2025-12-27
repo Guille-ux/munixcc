@@ -251,7 +251,7 @@ static TokenC getNextToken(void) {
 	}
 
 	// ahora cadenas de texto
-
+	// TODO adaptar para soportar \' y \" y demás símbolos
 	if (*cursor=='\"') {
 		while (*cursor!='\"' && *cursor!='\0') cursor++;
 		if (*cursor=='\0') {
@@ -303,6 +303,7 @@ static TokenC getNextToken(void) {
 		if (munixccPattern("i16")) return newTokC(start, cursor-start, g_line, C_TOKEN_I16);
 		if (munixccPattern("u8")) return newTokC(start, cursor-start, g_line, C_TOKEN_U8);
 		if (munixccPattern("i8")) return newTokC(start, cursor-start, g_line, C_TOKEN_I8);
+		if (munixccPattern("as")) return newTokC(start, cursor-start, g_line, C_TOKEN_AS); // nuevo token gente
 		else {
 			while (is_identifier_ch(*cursor++));
 			return newTokC(start, cursor-start, g_line, C_TOKEN_IDENTIFIER);

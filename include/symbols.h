@@ -5,6 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include "buffi.h"
+#include "tokens.h"
 
 #define MCC_MAX_SYMBOLS 256 // puedes cambiarlo por lo que quieras
 #define MCC_MAX_SYMBOL_NAME 32 // puedes cambiarlo por lo que quieras
@@ -44,5 +46,14 @@ void mcc_add_g(MCC_Var var);
 void mcc_push_var(MCC_Var var);
 void mcc_clean_tab(void); // para quitar lo que salio de scope
 MCC_Var *mcc_find_var(char *name);
+
+
+
+
+
+// otras partes....
+
+int handle_identifier(TokenC *tokens, BufferI *buffer);
+int handle_address(TokenC *tokens, BufferI *buffer);
 
 #endif
