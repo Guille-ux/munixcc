@@ -3,6 +3,8 @@
 MCC_g_Table CGlobalTable;
 MCC_VarTable CVarTable;
 
+bool isf=false;
+
 void mcc_add_g(MCC_Var var) {
 	if (CGlobalTable.symbol_count >= MCC_MAX_SYMBOLS) {
 		// ERROR
@@ -58,19 +60,42 @@ MCC_Var *mcc_find_var(char *name) {
 
 int handle_identifier(TokenC *tokens, BufferI *buffer) {
 	handle_address(tokens, buffer);
-	buffer->emitText(buffer, "mov eax, Meax\n");
+	buffer->emitText(buffer, "mov ecx, Meax\n");
+	TokenC *tok = eat(tokens);
+	if (tok->type == C_TOKEN_POSTFIX_ADD) {
+		buffer->emitText(buffer, "mov ebx, Meax\n");
+		buffer->emitText(buffer, "add ebx, 0d1\n");
+		buffer->emitText(buffer, "mov Meax, ebx\n");
+	} else if (tok->type == C_TOKEN_POSTFIX_SUB) {
+		buffer->emitText(buffer, "mov ebx, Meax\n");
+		buffer->emitText(buffer, "sub ebx, 0d1\n");
+		buffer->emitText(buffer, "mov Meax, ebx\n");
+	} else if (tok->type == C_TOKEN_LEFT_PAREN && isf) { // isf dice si es función global
+		buffer->emitText(buffer, "mov ecx, eax\n"); // importante
+		tok_index--;
+	} else {
+		tok_index--;
+	}
+	buffer->emitText(buffer, "mov eax, ecx\n");
 	return 0;
 }
+
+
 // lo siento operadores prefix
-int handle_address(TokenC *tokens, BufferI *buffer) {
+size_t handle_address(TokenC *tokens, BufferI *buffer) {
 	MCC_Var *var;
 	TokenC *tok = eat(tokens);
-	TokenC *next = eat(tokens);
 	
 	// formateando el token
 	char *tmp = (char*)malloc(tok->len+1);
 	memcpy(tmp, tok->start, tok->len);
 	tmp[tok->len] = '\0';
+
+	if (var->is_ptr) {
+		isf = true;
+	} else {
+		isf = false;
+	}
 
 	var = mcc_find_var(tmp);
 	size_t size = var->size;
@@ -79,24 +104,20 @@ int handle_address(TokenC *tokens, BufferI *buffer) {
 
 	if (var->global) {
 		buffer->emitText(buffer, "loax ");
-		char *tmp = (char*)malloc(MCC_MAX_SYMBOL_NAME+1);
-		buffer->emitText(buffer, );
+		char *tmp = (char*)malloc(MCC_MAX_SYMBOL_NAME+2);
+		tmp[MCC_MAX_SYMBOL_NAME] = '\n';
+		tmp[MCC_MAX_SYMBOL_NAME+1] = '\0';
+		buffer->emitText(buffer, tmp);
+		free(tmp);
 	} else {
 
+		buffer->emitText(buffer, "mov eax, ebp\n");
+		buffer->emitText(buffer, "sub eax, ");
+		char *arr = (char*)malloc(64);
+		buffer->emitText(buffer, int2char(arr, 64, var->offset));
+		buffer->emitText(buffer, "\n");
+		free(arr);
 	}
 
-	if (next->type == C_TOKEN_LEFT_PAREN) {
-	// function.. oh
-	} else if (next->type == C_TOKEN_LEFT_BRACKET) {
-	// NOOOOO
-	} else if (next->type == C_TOKEN_DOT) {
-
-	} else if (next->type == C_TOKEN_ARROW) {
-
-	} else if (next->type == C_TOKEN_POSTFIX_ADD) {
-
-	} else if (next->type == C_TOKEN_POSTFIX_SUB) {
-
-	}
-	return 0;
+	return size;
 }

@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include "buffi.h"
 #include "tokens.h"
+#include "utils.h"
 
 #define MCC_MAX_SYMBOLS 256 // puedes cambiarlo por lo que quieras
 #define MCC_MAX_SYMBOL_NAME 32 // puedes cambiarlo por lo que quieras
@@ -17,8 +18,10 @@
 typedef struct {
 	char name[MCC_MAX_SYMBOL_NAME];
 	char _type_[MCC_MAX_SYMBOL_NAME]; // algo principalmente informativo
-					  // no se
-	bool is_struct; // si es una struct, seria conveniente saberlp
+	
+	// los esgtructs fuera
+	// no se
+	//bool is_struct; // si es una struct, seria conveniente saberlp
 	size_t size;
 	size_t offset; // el offset es siempre negativo, pero guardamos lo
 		       // positivo
@@ -54,6 +57,6 @@ MCC_Var *mcc_find_var(char *name);
 // otras partes....
 
 int handle_identifier(TokenC *tokens, BufferI *buffer);
-int handle_address(TokenC *tokens, BufferI *buffer);
+size_t handle_address(TokenC *tokens, BufferI *buffer);
 
 #endif

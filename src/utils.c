@@ -23,5 +23,7 @@ char *int2char(char *string, size_t len, size_t num) {
 		if (num < 10) break; // llegamos al final del número
 		num /= 10;
 	}
+	string[--len] == 'd';
+	string[--len] == '0';
 	return string;
 }

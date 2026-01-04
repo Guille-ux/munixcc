@@ -5,6 +5,8 @@ size_t label = 0;
 size_t tok_index = 0;
 // usaremos etiquetas con hasta 4 dígitos por función!
 
+// TODO: parsePrototype
+
 // definiciones de funciones internas
 static int parseStatement(TokenC *tokens, BufferI *buffer);
 static int parsePrototype(TokenC *tokens, BufferI *buffer);
@@ -16,6 +18,9 @@ static int parseUnary(TokenC *tokens, BufferI *buffer);
 static int parseLogical(TokenC *tokens, BufferI *buffer);
 static int parseAdditive(TokenC *tokens, BufferI *buffer);
 static int parseMultiplicative(TokenC *tokens, BufferI *buffer);
+
+
+static int parseCallArg(TokenC *tokens, BufferI *buffer);
 
 // cosas de utilidad
 static TokenC *eat(TokenC *tokens) { // básicamente se come el token,rico rico
@@ -47,6 +52,19 @@ int mcc_parse_program(TokenC *tokens, BufferI *buffer) {
 // empujamos el resultado de eax a la pila, calculamos el otro resultado y
 // bajamos el valor de la pila a ecx
 
+/*
+ * Aquí voy a dedicar un momento a pensar los statements
+ *
+ * definition
+ * for
+ * while
+ * if - else
+ * switch
+ * function
+ * 
+ *
+ */
+
 
 // TODO: AÑADIR CÓDIGO DE parsePrototype y acabar parseStatement
 
@@ -77,16 +95,7 @@ static int parseExpression(TokenC *tokens, BufferI *buffer) {
  * Operadores de Multiplicación : *, /, %
  * Operadores Unarios : -, *, !, ~
  * Expresiones primarias: &num, (), l-value....
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
+ * 
  */
 
 static int parseLogical(TokenC *tokens, BufferI *buffer) {
@@ -312,8 +321,8 @@ static int parseUnary(TokenC *tokens, BufferI *buffer) {
 			buffer->emitText(buffer, "not eax\n");
 			break;
 		default: // continuamos con nuestra vida
-			parsePrimary(tokens, buffer);
 			tok_index--;
+			parsePrimary(tokens, buffer);
 			return 0;
 	}
 
@@ -364,9 +373,9 @@ static int parsePrimary(TokenC *tokens, BufferI *buffer) {
 			tok_index--;
 			return handle_identifier(tokens, buffer);
 		case C_TOKEN_BYTEWISE_AND:
-			// similar
-			tok_index--;
-			return handle_address(tokens, buffer);
+			// similar	
+			handle_address(tokens, buffer); // esta función devuelve tamaño
+			return 0;
 		case C_TOKEN_CHARACTER:
 			// something like the other, but this time is easier
 			// i guess
@@ -383,6 +392,47 @@ static int parsePrimary(TokenC *tokens, BufferI *buffer) {
 			break;
 
 	}
+	tok = eat(tokens);
+	if (tok->type == C_TOKEN_LEFT_PAREN) {
+		char *arr;
+		// OH, estamos ante una llamada a función
+		buffer->emitText(buffer, "push eax\n");
+		int nargs = parseCallArg(TokenC *tokens, BufferI *buffer);
+		buffer->emitText(buffer, "mov eax, "); 
+		arr = (char*)malloc(64);
+		buffer->emitText(buffer, int2char(arr, 64, nargs*4));
+		buffer->emitText(buffer, "\n");
+		buffer->emitText(buffer, "add eax, esp\n");
+		buffer->emitText(buffer, "mov eax, Meax\n"); 
+		buffer->emitText(buffer, "call eax\n");
+		buffer->emitText(buffer, "mov ecx, eax\n");
+		buffer->emitText(buffer, "mov eax, ");
+		buffer->emitText(buffer, int2char(arr, 64, nargs*4+4));
+		buffer->emitText(buffer, "\n");
+		free(arr);
+		buffer->emitText(buffer, "add esp, eax\n");
+		buffer->emitText(buffer, "mov eax, ecx\n");
+	} else {
+		tok_index--;
+	}
 	return 0;
 }
 
+static int parseCallArg(TokenC *tokens, BufferI *buffer) {
+	int nargs = 1;
+	TokenC *tok = eat(tokens);
+	while (1) {
+		if (tok->type == C_TOKEN_RIGHT_PAREN) {
+			nargs = (nargs > 1) ? nargs : 0;
+			break;
+		} else if (tok->type = C_TOKEN_COMMA) {
+			nargs++;
+		} else {
+			if (parseExpression(tokens, buffer)!=0) {
+				// ERROR
+			}
+			buffer->emitText(buffer, "push eax\n");
+		}
+	}
+	return nargs;
+}
