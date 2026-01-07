@@ -76,6 +76,7 @@ static int parseStatement(TokenC *tokens, BufferI buffer) {
 		case C_TOKEN_IF: return parseIf(tokens, buffer);
 		case C_TOKEN_LEFT_BRACE: return parseScope(tokens, buffer);
 		case C_TOKEN_RIGHT_BRACE: return 0; // IMPORTANTE
+		case C_TOKEN_SEMICOLON: tok_index++; return 0;
 		default: break; // BRUH, NO SE NADA
 	}
 	return -1; // no deberia haber llegado hasta aqui
@@ -459,11 +460,36 @@ static int parseIf(TokenC *tokens, BufferI *buffer) {
 		// ERROR
 		return -1;
 	}
+	buffer->emitText(buffer, "push eax\n");
 
 	if (eat(tokens)->type!=C_TOKEN_RIGHT_PAREN) {
 		// ERROR, FALTA EL PARENTESIS
 		return -1;
 	}
+
+	// antes de mover el statement, hacemos una comprobación
+	char *arr = (char*)malloc(MCC_MAX_SYMBOL_NAME+1);
+	arr[MCC_MAX_SYMBOL_NAME] = '\0';
+	arr[0] = 'L';
+	arr[1] = '_';
+	int2char(arr, 9, label++); // el 9 esta ahi porque permito hasta 6
+	memcpy(&arr[10], "IF\n", 4);	// cifras, + 2 de L_ y + 1 de '\0'
+	arr[9] = '_';
+
+	buffer->emitText(buffer, "loax ");
+	buffer->emitText(buffer, arr);
+	buffer->emitText(buffer, "mov ecx, eax\n"); // guardamos el valor
+	memcpy(&arr[10], "ELSE\n", 6);
+	buffer->emitText(buffer, "loax ");
+	buffer->emitText(buffer, arr);
+
+	buffer->emitText(buffer, "pop ebx\n"); // preparar la comparación
+	buffer->emitText(buffer, "mov edx, 0d1\n");
+	buffer->emitText(buffer, "cmp edx, ebx\n"); // comparamo
+	
+	buffer->emitText(buffer, "cmovz eax, ecx\n"); // movemos si true
+	
+	buffer->emitText(buffer, "jmp eax\n");
 
 	if (parseStatement(tokens, buffer)!=0) {
 		// ERROR
@@ -471,36 +497,41 @@ static int parseIf(TokenC *tokens, BufferI *buffer) {
 	}
 
 
-	// emitimos código si se cumple
-	
-
 	// ahora, si se cumple, hacemos salto a fin, bueno, no, hacemos salto
 	// si no se cumpliese hubiesemos ido a ELSE
 
-	char *arr = (char*)malloc(MCC_MAX_SYMBOL_NAME+1);
-	arr[MCC_MAX_SYMBOL_NAME] = '\0';
-	arr[0] = 'L';
-	arr[1] = '_';
-	int2char(arr, 9, label++); // el 9 esta ahi porque permito hasta 6
-				   // cifras, + 2 de L_ y + 1 de '\0'
-	arr[9] = '_';
-	memcpy(&arr[10], "FIN", 4);
+	
+
+	// AQUI ANTES DE EMITIR CÓDIGO IF, hacemos un movnz
+
+
+	memcpy(&arr[10], "END\n", 5);
 
 	// AHORA HACEMOS SALTO AL FIN, de hecho, creo que haremos primero
 	buffer->emitText(buffer, "loax ");
 	buffer->emitText(buffer, arr);
-	buffer->emitText(buffer, "\njmp eax\n"); // hacemos salto a eax
+	buffer->emitText(buffer, "jmp eax\n"); // hacemos salto a eax
 
 	// AHORA USAMOS ELSE
-	memcpy(&arr[10], "ELSE", 5);
+	memcpy(&arr[10], "ELSE\n", 6);
+	buffer->emitText(buffer, ".label "); // creamos etiqueta
+	buffer->emitText(buffer, arr);
 
 	// TRABAJAMOS CON LA ETIQUETA ELSE, si no hay else, sigue siendo
 	// necesario, asi es más fácil
-
+	if (peek(tokens)->type == C_TOKEN_ELSE) {
+		eat(tokens);
+		if (parseStatement(tokens, buffer)!=0) {
+			// ERROR
+			return -1;
+		}
+	}
 
 
 	// YA ACABAMOS CON ELSE, AHORA TOCA END
-	memcpy(&arr[10], "END", 4);
+	memcpy(&arr[10], "END\n", 5);
+	buffer->emitText(buffer, ".label "); // creamos la etiqueta
+	buffer->emitText(buffer, arr);
 	// trabajamos con la etiqueta end
 
 

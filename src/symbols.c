@@ -60,15 +60,16 @@ MCC_Var *mcc_find_var(char *name) {
 
 int handle_identifier(TokenC *tokens, BufferI *buffer) {
 	handle_address(tokens, buffer);
+	buffer->emitText(buffer, "mov edx, 0d1\n");
 	buffer->emitText(buffer, "mov ecx, Meax\n");
 	TokenC *tok = eat(tokens);
 	if (tok->type == C_TOKEN_POSTFIX_ADD) {
 		buffer->emitText(buffer, "mov ebx, Meax\n");
-		buffer->emitText(buffer, "add ebx, 0d1\n");
+		buffer->emitText(buffer, "add ebx, edx\n");
 		buffer->emitText(buffer, "mov Meax, ebx\n");
 	} else if (tok->type == C_TOKEN_POSTFIX_SUB) {
 		buffer->emitText(buffer, "mov ebx, Meax\n");
-		buffer->emitText(buffer, "sub ebx, 0d1\n");
+		buffer->emitText(buffer, "sub ebx, edx\n");
 		buffer->emitText(buffer, "mov Meax, ebx\n");
 	} else if (tok->type == C_TOKEN_LEFT_PAREN && isf) { // isf dice si es función global
 		buffer->emitText(buffer, "mov ecx, eax\n"); // importante
@@ -112,11 +113,13 @@ size_t handle_address(TokenC *tokens, BufferI *buffer) {
 	} else {
 
 		buffer->emitText(buffer, "mov eax, ebp\n");
-		buffer->emitText(buffer, "sub eax, ");
 		char *arr = (char*)malloc(64);
+		buffer->emitText(buffer, "mov ecx, ");
 		buffer->emitText(buffer, int2char(arr, 64, var->offset));
 		buffer->emitText(buffer, "\n");
 		free(arr);
+		buffer->emitText(buffer, "sub eax, ecx\n");
+		
 	}
 
 	return size;
