@@ -10,6 +10,8 @@ size_t tok_index = 0;
 // definiciones de funciones internas
 static int parseStatement(TokenC *tokens, BufferI *buffer);
 static int parsePrototype(TokenC *tokens, BufferI *buffer);
+static int parseIf(TokenC *tokens, BufferI *buffer);
+static int parseScope(TokenC *tokens, BufferI *buffer);
 
 // definiciones para parseo de expresiones
 static int parseExpression(TokenC *tokens, BufferI *buffer);
@@ -69,8 +71,11 @@ int mcc_parse_program(TokenC *tokens, BufferI *buffer) {
 // TODO: AÑADIR CÓDIGO DE parsePrototype y acabar parseStatement
 
 static int parseStatement(TokenC *tokens, BufferI buffer) {
-	switch (eat(tokens)->type) {
+	switch (peek(tokens)->type) {
 		case C_TOKEN_EXTERN: return parsePrototype(tokens, buffer);
+		case C_TOKEN_IF: return parseIf(tokens, buffer);
+		case C_TOKEN_LEFT_BRACE: return parseScope(tokens, buffer);
+		case C_TOKEN_RIGHT_BRACE: return 0; // IMPORTANTE
 		default: break; // BRUH, NO SE NADA
 	}
 	return -1; // no deberia haber llegado hasta aqui
@@ -435,4 +440,87 @@ static int parseCallArg(TokenC *tokens, BufferI *buffer) {
 		}
 	}
 	return nargs;
+}
+
+static int parsePrototype(TokenC *tokens, BufferI *buffer) {
+
+}
+
+static int parseIf(TokenC *tokens, BufferI *buffer) {
+	tok_index++;
+	TokenC *tok = eat(tokens);
+	
+	if (tok->type != C_TOKEN_LEFT_PAREN) {
+		// ERROR
+		return -1;
+	}
+	
+	if (0 != parseExpression(tokens, buffer)) {
+		// ERROR
+		return -1;
+	}
+
+	if (eat(tokens)->type!=C_TOKEN_RIGHT_PAREN) {
+		// ERROR, FALTA EL PARENTESIS
+		return -1;
+	}
+
+	if (parseStatement(tokens, buffer)!=0) {
+		// ERROR
+		return -1;
+	}
+
+
+	// emitimos código si se cumple
+	
+
+	// ahora, si se cumple, hacemos salto a fin, bueno, no, hacemos salto
+	// si no se cumpliese hubiesemos ido a ELSE
+
+	char *arr = (char*)malloc(MCC_MAX_SYMBOL_NAME+1);
+	arr[MCC_MAX_SYMBOL_NAME] = '\0';
+	arr[0] = 'L';
+	arr[1] = '_';
+	int2char(arr, 9, label++); // el 9 esta ahi porque permito hasta 6
+				   // cifras, + 2 de L_ y + 1 de '\0'
+	arr[9] = '_';
+	memcpy(&arr[10], "FIN", 4);
+
+	// AHORA HACEMOS SALTO AL FIN, de hecho, creo que haremos primero
+	buffer->emitText(buffer, "loax ");
+	buffer->emitText(buffer, arr);
+	buffer->emitText(buffer, "\njmp eax\n"); // hacemos salto a eax
+
+	// AHORA USAMOS ELSE
+	memcpy(&arr[10], "ELSE", 5);
+
+	// TRABAJAMOS CON LA ETIQUETA ELSE, si no hay else, sigue siendo
+	// necesario, asi es más fácil
+
+
+
+	// YA ACABAMOS CON ELSE, AHORA TOCA END
+	memcpy(&arr[10], "END", 4);
+	// trabajamos con la etiqueta end
+
+
+	free(arr);
+	
+
+	return 0;
+}
+
+static int parseScope(TokenC *tokens, BufferI *buffer) {
+	eat(tokens);
+	CVarTable.current_scope++;
+	while (peek(tokens)->type != C_TOKEN_RIGHT_BRACE) {
+		if (parseStatement(tokens, buffer)!=0) {
+			// ERROR
+			return -1
+		}
+	}
+	CVarTable.current_scope--;
+	mcc_clean_tab();
+	eat(tokens);
+	return 0;
 }
