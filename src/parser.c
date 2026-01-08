@@ -12,6 +12,8 @@ static int parseStatement(TokenC *tokens, BufferI *buffer);
 static int parsePrototype(TokenC *tokens, BufferI *buffer);
 static int parseIf(TokenC *tokens, BufferI *buffer);
 static int parseScope(TokenC *tokens, BufferI *buffer);
+static int parseDeclaration(TokenC *tokens, BufferI *buffer);
+static int parseIdentifier(TokenC *tokens, BufferI *buffer);
 
 // definiciones para parseo de expresiones
 static int parseExpression(TokenC *tokens, BufferI *buffer);
@@ -70,13 +72,21 @@ int mcc_parse_program(TokenC *tokens, BufferI *buffer) {
 
 // TODO: AÑADIR CÓDIGO DE parsePrototype y acabar parseStatement
 
-static int parseStatement(TokenC *tokens, BufferI buffer) {
+static int parseStatement(TokenC *tokens, BufferI *buffer) {
 	switch (peek(tokens)->type) {
 		case C_TOKEN_EXTERN: return parsePrototype(tokens, buffer);
 		case C_TOKEN_IF: return parseIf(tokens, buffer);
 		case C_TOKEN_LEFT_BRACE: return parseScope(tokens, buffer);
 		case C_TOKEN_RIGHT_BRACE: return 0; // IMPORTANTE
 		case C_TOKEN_SEMICOLON: tok_index++; return 0;
+		case C_TOKEN_INT:
+		case C_TOKEN_VOID:
+			// cosas para declaraciones, digo, es diferente no?
+			return parseDeclaration(tokens, buffer);
+		case C_TOKEN_IDENTIFIER:
+			// gestiona asignaciones y llamadas a funciones que
+			// van fuera de una expresión
+			return parseIdentifier(tokens, buffer);
 		default: break; // BRUH, NO SE NADA
 	}
 	return -1; // no deberia haber llegado hasta aqui
@@ -553,5 +563,69 @@ static int parseScope(TokenC *tokens, BufferI *buffer) {
 	CVarTable.current_scope--;
 	mcc_clean_tab();
 	eat(tokens);
+	return 0;
+}
+
+static int parseDeclaration(TokenC *tokens, BufferI *buffer) {
+	// la parte fácil es gestionar la declaración de variables
+	// lo difícil son las funciones, omg
+	return 0;
+}
+
+static int parseIdentifier(TokenC *tokens, BufferI *buffer) {
+	TokenC *identifier = eat(tokens);
+
+
+	if (peek(tokens)->type == C_TOKEN_LEFT_PAREN) {
+		// volver atrás y llamar a parseExpression
+		tok_index--;
+		return parseExpression(tokens, buffer);
+	}
+	MCC_Var *var;
+	char *arr = (char*)malloc(identifier->len+1);
+	memcpy(arr, identifier->start, identifier->len);
+	arr[identifier->len] = '\0';
+
+	var = mcc_find_var(arr); // ya tenemos la variable
+	free(arr);
+	
+	arr = (char*)malloc(64);	
+
+	if (peek(tokens)->type == C_TOKEN_ASSIGN) {
+		// hacer una asignación, es decir, vamos a calcular la expresión
+		// luego pegarla en la variable
+		eat(tokens);
+		if (0!=parseExpression(tokens, buffer)) {
+			// oh, no, hubo un error
+			// a tomar por saco
+			return -1;
+		}
+		buffer->emitText(buffer, "push eax\n"); // empujar para no perder
+		buffer->emitText(buffer, "mov ecx, ");
+		buffer->emitText(buffer, int2char(arr, 64, var->offset));
+		buffer->emitText(buffer, "mov eax, ebp\n");
+		buffer->emitText(buffer, "sub eax, ecx\n");
+		buffer->emitText(buffer, "pop ecx\n");
+		buffer->emitText(buffer, "mov Meax, ecx\n");
+
+		free(arr);
+	}
+
+	/*
+	 * El soporte de diferentes asignaciones con multiplicación suma etc
+	 * lo dejaremos para más adelante
+	 *
+	switch (peek(tokens)->type) {
+		case C_TOKEN_ASSIGN:
+		case C_TOKEN_SUB_ASSIGN:
+		case C_TOKEN_ADD_ASSIGN:
+		case C_TOKEN_MUL_ASSIGN:
+		case C_TOKEN_DIV_ASSIGN:
+		case C_TOKEN_MOD_ASSIGN:
+		default: // ERROR
+			return -1;
+	}
+	*/
+
 	return 0;
 }

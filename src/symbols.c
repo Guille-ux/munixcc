@@ -116,7 +116,8 @@ size_t handle_address(TokenC *tokens, BufferI *buffer) {
 		char *arr = (char*)malloc(64);
 		buffer->emitText(buffer, "mov ecx, ");
 		buffer->emitText(buffer, int2char(arr, 64, var->offset));
-		buffer->emitText(buffer, "\n");
+		buffer->emitText(buffer, "\n"); // ya no es necesario, pero
+						// se queda
 		free(arr);
 		buffer->emitText(buffer, "sub eax, ecx\n");
 		
