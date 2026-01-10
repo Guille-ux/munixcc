@@ -1,6 +1,10 @@
 #include "../include/compat.h"
 #include "../include/parser.h"
 
+// TODO: añadir manejo de errores, acabar el resto de cosas
+
+char *name_base;
+
 size_t label = 0;
 size_t tok_index = 0;
 // usaremos etiquetas con hasta 4 dígitos por función!
@@ -14,6 +18,7 @@ static int parseIf(TokenC *tokens, BufferI *buffer);
 static int parseScope(TokenC *tokens, BufferI *buffer);
 static int parseDeclaration(TokenC *tokens, BufferI *buffer);
 static int parseIdentifier(TokenC *tokens, BufferI *buffer);
+static int parseFunctionDeclaration(TokenC *tokens, BufferI *buffer);
 
 // definiciones para parseo de expresiones
 static int parseExpression(TokenC *tokens, BufferI *buffer);
@@ -36,8 +41,17 @@ static TokenC *peek(TokenC *tokens) { // te devuelve el actual sin avanzar
 }
 
 int mcc_parse_program(TokenC *tokens, BufferI *buffer) {
+	// limpiamos flags globales
 	tok_index = 0;
 	label = 0;
+	/*
+	 * El siguiente fragmento es para limpiar las tablas
+	 */
+	CGlobalTable.symbol_count = 0;
+	CVarTable.current_stack_offset = 0;
+	CVarTable.current_scope = 0;
+	CVarTable.symbol_count = 0;
+
 	while (tokens[i].type!=TOKEN_EOF) {
 		// llamamos a parse statement
 		if (parseStatement(tokens, buffer) != 0) {
@@ -479,17 +493,17 @@ static int parseIf(TokenC *tokens, BufferI *buffer) {
 
 	// antes de mover el statement, hacemos una comprobación
 	char *arr = (char*)malloc(MCC_MAX_SYMBOL_NAME+1);
+	memset(arr, '_', MCC_MAX_SYMBOL_NAME+1);
 	arr[MCC_MAX_SYMBOL_NAME] = '\0';
 	arr[0] = 'L';
-	arr[1] = '_';
 	int2char(arr, 9, label++); // el 9 esta ahi porque permito hasta 6
-	memcpy(&arr[10], "IF\n", 4);	// cifras, + 2 de L_ y + 1 de '\0'
-	arr[9] = '_';
+	memcpy(&arr[10], name_base, 15);
+	memcpy(&arr[25], "IF\n", 4);	// cifras, + 2 de L_ y + 1 de '\0'
 
 	buffer->emitText(buffer, "loax ");
 	buffer->emitText(buffer, arr);
 	buffer->emitText(buffer, "mov ecx, eax\n"); // guardamos el valor
-	memcpy(&arr[10], "ELSE\n", 6);
+	memcpy(&arr[25], "ELSE\n", 6);
 	buffer->emitText(buffer, "loax ");
 	buffer->emitText(buffer, arr);
 
@@ -515,7 +529,7 @@ static int parseIf(TokenC *tokens, BufferI *buffer) {
 	// AQUI ANTES DE EMITIR CÓDIGO IF, hacemos un movnz
 
 
-	memcpy(&arr[10], "END\n", 5);
+	memcpy(&arr[25], "END\n", 5);
 
 	// AHORA HACEMOS SALTO AL FIN, de hecho, creo que haremos primero
 	buffer->emitText(buffer, "loax ");
@@ -523,7 +537,7 @@ static int parseIf(TokenC *tokens, BufferI *buffer) {
 	buffer->emitText(buffer, "jmp eax\n"); // hacemos salto a eax
 
 	// AHORA USAMOS ELSE
-	memcpy(&arr[10], "ELSE\n", 6);
+	memcpy(&arr[25], "ELSE\n", 6);
 	buffer->emitText(buffer, ".label "); // creamos etiqueta
 	buffer->emitText(buffer, arr);
 
@@ -539,14 +553,13 @@ static int parseIf(TokenC *tokens, BufferI *buffer) {
 
 
 	// YA ACABAMOS CON ELSE, AHORA TOCA END
-	memcpy(&arr[10], "END\n", 5);
+	memcpy(&arr[25], "END\n", 5);
 	buffer->emitText(buffer, ".label "); // creamos la etiqueta
 	buffer->emitText(buffer, arr);
 	// trabajamos con la etiqueta end
 
 
-	free(arr);
-	
+	free(arr);	
 
 	return 0;
 }
@@ -569,29 +582,63 @@ static int parseScope(TokenC *tokens, BufferI *buffer) {
 static int parseDeclaration(TokenC *tokens, BufferI *buffer) {
 	// la parte fácil es gestionar la declaración de variables
 	// lo difícil son las funciones, omg
-	return 0;
+	TokenC *type = eat(tokens);
+	TokenC *dat = eat(tokens);
+	MCC_Var var;
+	var.size = 4;
+
+	memcpy(&var.name, dat->start, dat->len);
+	memcpy(&var._type_, type->start, type->len);
+	var.name[MCC_MAX_SYMBOL_NAME-1] = '\0';
+	var._type_[MCC_MAX_SYMBOL_NAME-1] = '\0';
+
+
+	if (CVarTable.current_scope < 1) {
+		// en este caso es algo global, va por la tabla de globales
+		// CGlobalTable, aqui podria ser una función
+		if (peek(tokens)->type == C_TOKEN_LEFT_PAREN) {
+			// es una función, hacemos nuestras cosas....
+			// solo tenemos que devolver lo que haga el parser 
+			buffer->emitText(buffer, ".label ");
+			buffer->emitText(buffer, var.name);
+			buffer->emitText(buffer, "\n");
+			
+			return parseFunctionDeclaration(tokens, buffer);
+		} else {
+			// variable normal
+			buffer->emitText(buffer, ".label ");
+			buffer->emitText(buffer, var.name);
+			buffer->emitText(buffer, "\n");
+			buffer->emitText(buffer, "dd 0x0\n")
+			mcc_add_g(var);
+		}
+	} else {
+		// entonces no es global, estamos dentro de algun scope
+		// aqui usamos la tabla normal, CVarTable, aqui solo es un var
+		mcc_push_var(var);
+	}
+	tok_index--; // restauramos el indice
+		     // por si las moscas
+	return parseStatement(tokens, buffer); // esto permite manejar
+					       // fácilmente cosas como
+					       // int x = 5;
 }
 
 static int parseIdentifier(TokenC *tokens, BufferI *buffer) {
 	TokenC *identifier = eat(tokens);
-
-
-	if (peek(tokens)->type == C_TOKEN_LEFT_PAREN) {
-		// volver atrás y llamar a parseExpression
-		tok_index--;
-		return parseExpression(tokens, buffer);
-	}
-	MCC_Var *var;
-	char *arr = (char*)malloc(identifier->len+1);
-	memcpy(arr, identifier->start, identifier->len);
-	arr[identifier->len] = '\0';
-
-	var = mcc_find_var(arr); // ya tenemos la variable
-	free(arr);
 	
-	arr = (char*)malloc(64);	
-
 	if (peek(tokens)->type == C_TOKEN_ASSIGN) {
+		MCC_Var *var;
+		char *arr = (char*)malloc(identifier->len+1);
+		memcpy(arr, identifier->start, identifier->len);
+		arr[identifier->len] = '\0';
+
+		var = mcc_find_var(arr); // ya tenemos la variable
+		free(arr);
+	
+		arr = (char*)malloc(64);	
+
+	
 		// hacer una asignación, es decir, vamos a calcular la expresión
 		// luego pegarla en la variable
 		eat(tokens);
@@ -609,7 +656,13 @@ static int parseIdentifier(TokenC *tokens, BufferI *buffer) {
 		buffer->emitText(buffer, "mov Meax, ecx\n");
 
 		free(arr);
-	}
+	} else {
+		// esta opción existe para permitir otras cosas, como llamadas
+		// o simplemente postfix, o si cambio en el futuro algunos
+		// operadores.
+		tok_index--;
+		return parseExpression(tokens, buffer);
+	} 
 
 	/*
 	 * El soporte de diferentes asignaciones con multiplicación suma etc
@@ -627,5 +680,10 @@ static int parseIdentifier(TokenC *tokens, BufferI *buffer) {
 	}
 	*/
 
+	return 0;
+}
+
+static int parseFunctionDeclaration(TokenC *tokens, BufferI *buffer) {
+	// aqui parsearemos funciones
 	return 0;
 }

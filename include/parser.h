@@ -12,6 +12,8 @@
 #include "symbols.h"
 #include "bufferi.h"
 
+extern char *name_base; // máximo 15 chars, (sin contar con '\0')
+
 int mcc_parse_program(TokenC *tokens, BufferI *buffer);
 
 #endif

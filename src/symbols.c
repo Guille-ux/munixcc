@@ -18,11 +18,11 @@ void mcc_push_var(MCC_Var var) {
 	if (CVarTable.symbol_count >= MCC_MAX_SYMBOLS) {
 		// ERROR
 		return;
-	}
-	CVarTable.current_stack_offset += var.size;
+	}	
 	var.nscope = CVarTable.current_scope;
 	var.offset = CVarTable.current_stack_offset;
 	var.global = false;
+	CVarTable.current_stack_offset += var.size;
 	memcpy(&CVarTable.table[CVarTable.symbol_count++], &var, sizeof(MCC_Var));
 }
 
