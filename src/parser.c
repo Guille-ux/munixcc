@@ -19,6 +19,8 @@ static int parseScope(TokenC *tokens, BufferI *buffer);
 static int parseDeclaration(TokenC *tokens, BufferI *buffer);
 static int parseIdentifier(TokenC *tokens, BufferI *buffer);
 static int parseFunctionDeclaration(TokenC *tokens, BufferI *buffer);
+static int parseReturn(TokenC *tokens, BufferI *buffer);
+static int parseWhile(TokenC *tokens, BufferI *buffer);
 
 // definiciones para parseo de expresiones
 static int parseExpression(TokenC *tokens, BufferI *buffer);
@@ -719,5 +721,13 @@ static int parseFunctionDeclaration(TokenC *tokens, BufferI *buffer) {
 	buffer->emitText(buffer, "mov esp, ebp\n");
 	buffer->emitText(buffer, "pop ebp\n");
 	buffer->emitText(buffer, "ret\n");
+	return 0;
+}
+
+static int parseReturn(TokenC *tokens, BufferI *buffer) {
+	return 0;
+}
+
+static int parseWhile(TokenC *tokens, BufferI *buffer) {
 	return 0;
 }
