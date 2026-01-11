@@ -468,7 +468,8 @@ static int parseCallArg(TokenC *tokens, BufferI *buffer) {
 }
 
 static int parsePrototype(TokenC *tokens, BufferI *buffer) {
-
+	// IDK, solo hacer eso
+	return 0;
 }
 
 static int parseIf(TokenC *tokens, BufferI *buffer) {
@@ -685,5 +686,38 @@ static int parseIdentifier(TokenC *tokens, BufferI *buffer) {
 
 static int parseFunctionDeclaration(TokenC *tokens, BufferI *buffer) {
 	// aqui parsearemos funciones
+	// se supone que el primer caracter es '('
+	eat(tokens); 
+	// ahora vienen argumentos
+	// primero preparamos algo...
+	CVarTable.current_scope = 1;
+	CVarTable.stack_offset = 8;// es así porque - 0 esta ocupado
+				   // por el anterior ebp
+				   // y el - 4 esta ocupado por la dirección
+				   // de return
+	// así que me toca implementar algo para los argumentos
+	// usaremos un while
+	while (1) {
+		if (peek(tokens)->type == C_TOKEN_RIGHT_PAREN) break;
+		if (peek(tokens)->type == C_TOKEN_COMMA) eat(tokens);
+		parseDeclaration(tokens, buffer);
+		// ahora, modificamos sus valores
+		MCC_Var current = CVarTable.table[CVarTable.symbol_count];
+
+	}
+
+	// despues de eso reseteamos algunas cosas...
+	CVarTable.current_scope = 0;
+	if (0!=parseStatement(tokens, buffer)) {// aunque debería poner scope
+					       // de todas formas
+					       // lo dejo así
+					       // porque esto puede facilitar
+					       // crear funciones en asm
+		// ERROR
+		return -1;
+	}
+	buffer->emitText(buffer, "mov esp, ebp\n");
+	buffer->emitText(buffer, "pop ebp\n");
+	buffer->emitText(buffer, "ret\n");
 	return 0;
 }
