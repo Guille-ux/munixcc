@@ -761,16 +761,30 @@ static int parseWhile(TokenC *tokens, BufferI *buffer) {
 	}
 	// empujamos eax para no perder su valor
 	buffer->emitText("push eax\n");
+	// preparamos etiqueta
 	memcpy(&arr[25], "BODY\n", 6);
 	
+	buffer->emitText(buffer, "loax ");
+	buffer->emitText(buffer, arr);
+	buffer->emitText(buffer, "mov ebx, eax\n");
 	// cargamos etiqueta de inicio
 	// preparamos una etiqueta que usaremos ahora
 	memcpy(&arr[25], "END\n", 5);
 	buffer->emitText(buffer, "loax ");
 	buffer->emitText(buffer, arr);
 	// comparamos...
-	buffer->emitText();
+	// preparación.....
+	buffer->emitText(buffer, "mov edx, 0d1\n");
+	buffer->emitText(buffer, "pop ecx\n");
+	// ahora si se compara
+	buffer->emitText(buffer, "cmp edx, ecx\n");
 
+	// ahora usamos mov condicional, que tortura
+	buffer->emitText(buffer, "cmovz eax, ebx\n");
+	// ahora saltamos
+	buffer->emitText(buffer, "jmp eax\n");
+
+	memcpy(&arr[25], "BODY\n", 6);
 	buffer->emitText(buffer, ".label ");
 	buffer->emitText(buffer, arr);
 	
