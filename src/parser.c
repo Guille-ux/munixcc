@@ -33,6 +33,7 @@ static int parseMultiplicative(TokenC *tokens, BufferI *buffer);
 
 static int parseCallArg(TokenC *tokens, BufferI *buffer);
 
+
 // cosas de utilidad
 static TokenC *eat(TokenC *tokens) { // básicamente se come el token,rico rico
 	return &tokens[tok_index++];
@@ -614,7 +615,27 @@ static int parseDeclaration(TokenC *tokens, BufferI *buffer) {
 			buffer->emitText(buffer, ".label ");
 			buffer->emitText(buffer, var.name);
 			buffer->emitText(buffer, "\n");
-			buffer->emitText(buffer, "dd 0x0\n")
+			if (peek(tokens)->type == C_TOKEN_LEFT_BRACKET) {
+				tok_index++;
+				char *arr = (char*)malloc(64);
+				memset(arr, '\0', 64);
+				TokenC *tok = eat(tokens);
+				if (eat(tokens)->type != C_TOKEN_RIGHT_BRACKET) {
+					// ERROR!
+					return -1;
+				}
+				if (tok->type != C_TOKEN_NUMBER) {
+					// ERROR!
+					return -1;
+				}
+				memcpy(arr, tok->start, tok->len);
+				buffer->emitText(buffer, "%times ");
+				buffer->emitText(buffer, arr);
+				buffer->emitText(buffer, " 0d0\n");
+				free(arr);
+			} else {
+				buffer->emitText(buffer, "dd 0x0\n")
+			}
 			mcc_add_g(var);
 		}
 	} else {
@@ -810,3 +831,5 @@ static int parseWhile(TokenC *tokens, BufferI *buffer) {
 	free(arr);
 	return 0;
 }
+
+
