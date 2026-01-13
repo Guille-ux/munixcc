@@ -741,5 +741,38 @@ static int parseReturn(TokenC *tokens, BufferI *buffer) {
 }
 
 static int parseWhile(TokenC *tokens, BufferI *buffer) {
+	//
+	char *arr = (char*)malloc(MCC_MAX_SYMBOL_NAME+1);
+	memset(arr, '_', MCC_MAX_SYMBOL_NAME+1);
+	arr[MCC_MAX_SYMBOL_NAME] = '\0';
+	arr[0] = 'L';
+	int2char(arr, 9, label++); // el 9 esta ahi porque permito hasta 6
+	memcpy(&arr[10], name_base, 15);
+	memcpy(&arr[25], "WHILE\n", 7);
+
+	// creamos la etiqueta
+	buffer->emitText(buffer, ".label ");
+	buffer->emitText(buffer, arr);
+
+	// parseamos la condición
+	if (parseExpression(tokens, buffer)!=0) {
+		// ERROR!
+		return -1;
+	}
+	// empujamos eax para no perder su valor
+	buffer->emitText("push eax\n");
+	memcpy(&arr[25], "BODY\n", 6);
+	
+	// cargamos etiqueta de inicio
+	// preparamos una etiqueta que usaremos ahora
+	memcpy(&arr[25], "END\n", 5);
+	buffer->emitText(buffer, "loax ");
+	buffer->emitText(buffer, arr);
+	// comparamos...
+	buffer->emitText();
+
+	buffer->emitText(buffer, ".label ");
+	buffer->emitText(buffer, arr);
+	
 	return 0;
 }
