@@ -787,6 +787,26 @@ static int parseWhile(TokenC *tokens, BufferI *buffer) {
 	memcpy(&arr[25], "BODY\n", 6);
 	buffer->emitText(buffer, ".label ");
 	buffer->emitText(buffer, arr);
+
+	// ahora ponemos el cuerpo del bucle
+	if (parseStatement(tokens, buffer)!=0) {
+		// ERROR!
+		return -1;
+	}
+	// ahora toca lógica para volver al inicio, que es sencillo, es
+	// un loax y un salto, pero nada más, tambien toca crear la etiqueta
+	// del final
+	memcpy(&arr[25], "WHILE\n", 7);
+	buffer->emitText(buffer, "loax ");
+	buffer->emitText(buffer, arr);
+
+	// ahora, toca saltar
+	buffer->emitText(buffer, "jmp eax\n");
+	// ahora creamos etiqueta del final
+	memcpy(&arr[25], "END\n", 5);
+	buffer->emitText(buffer, ".label ");
+	buffer->emitText(buffer, arr);
 	
+	free(arr);
 	return 0;
 }
