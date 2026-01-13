@@ -729,6 +729,14 @@ static int parseFunctionDeclaration(TokenC *tokens, BufferI *buffer) {
 }
 
 static int parseReturn(TokenC *tokens, BufferI *buffer) {
+	eat(tokens);
+	if (parseExpression(tokens, buffer)!=0) {
+		// ERROR!
+		return -1;
+	}
+	buffer->emitText(buffer, "mov esp, ebp\n");
+	buffer->emitText(buffer, "pop ebp\n");
+	buffer->emitText(buffer, "ret\n");
 	return 0;
 }
 
