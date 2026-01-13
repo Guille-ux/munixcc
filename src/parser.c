@@ -103,6 +103,8 @@ static int parseStatement(TokenC *tokens, BufferI *buffer) {
 			// gestiona asignaciones y llamadas a funciones que
 			// van fuera de una expresión
 			return parseIdentifier(tokens, buffer);
+		case C_TOKEN_RETURN: return parseReturn(tokens, buffer);
+		case C_TOKEN_WHILE: return parseWhile(tokens, buffer);
 		default: break; // BRUH, NO SE NADA
 	}
 	return -1; // no deberia haber llegado hasta aqui
@@ -704,12 +706,14 @@ static int parseFunctionDeclaration(TokenC *tokens, BufferI *buffer) {
 		if (peek(tokens)->type == C_TOKEN_COMMA) eat(tokens);
 		parseDeclaration(tokens, buffer);
 		// ahora, modificamos sus valores
-		MCC_Var current = CVarTable.table[CVarTable.symbol_count];
-
+		MCC_Var *current = &CVarTable.table[CVarTable.symbol_count];
+		// jijii, entonces, si el offset inicial era 0...
+		current->offset = (size_t)(-current->offset);
 	}
 
 	// despues de eso reseteamos algunas cosas...
 	CVarTable.current_scope = 0;
+	CVarTable.stack_offset = 0; // importante
 	if (0!=parseStatement(tokens, buffer)) {// aunque debería poner scope
 					       // de todas formas
 					       // lo dejo así
