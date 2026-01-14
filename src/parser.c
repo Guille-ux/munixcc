@@ -22,6 +22,7 @@ static int parseFunctionDeclaration(TokenC *tokens, BufferI *buffer);
 static int parseReturn(TokenC *tokens, BufferI *buffer);
 static int parseWhile(TokenC *tokens, BufferI *buffer);
 static int parseGoto(TokenC *tokens, BufferI *buffer);
+static int parseAsm(TokenC *tokens, BufferI *buffer);
 
 // definiciones para parseo de expresiones
 static int parseExpression(TokenC *tokens, BufferI *buffer);
@@ -108,6 +109,7 @@ static int parseStatement(TokenC *tokens, BufferI *buffer) {
 		case C_TOKEN_RETURN: return parseReturn(tokens, buffer);
 		case C_TOKEN_WHILE: return parseWhile(tokens, buffer);
 		case C_TOKEN_GOTO: return parseGoto(tokens, buffer);
+		case C_TOKEN_ASM: return parseAsm(tokens, buffer);
 		default: break; // BRUH, NO SE NADA
 	}
 	return -1; // no deberia haber llegado hasta aqui
@@ -876,6 +878,44 @@ static int parseGoto(TokenC *tokens, BufferI *buffer) {
 
 	// ahora emitimos el salto a eax
 	buffer->emitText(buffer, "jmp eax\n");
+
+	free(arr);
+
+	return 0;
+}
+
+// ahora lo último en un buen tiempo, añadir asm
+// bueno realmente no, tocara escribir mucho en poco tiempo
+// para hacer el preprocesador, aunque no necesito include al no necesitar
+// predeclaración
+static int parseAsm(TokenC *tokens, BufferI *buffer) {
+	eat(tokens);
+	if (eat(tokens)->type != C_TOKEN_LEFT_PAREN) {
+		// ERROR!
+		return -1;
+	}
 	
+	TokenC *tok = eat(tokens);
+	
+	if (eat(tokens)->type != C_TOKEN_RIGHT_PAREN) {
+		// ERROR!
+		return -1;
+	}
+	
+	if (tok->type != C_TOKEN_STRING) {
+		// ERROR!
+		return -1;
+	}
+
+	char *arr = (char*)malloc(tok->len);
+	memcpy(arr, tok->start+1, tok->len-1);
+	arr[tok->len-2] = '\n';
+	arr[tok->len-1] = '\0';
+
+	// ahora emitimos ese ensamblador
+	buffer->emitText(buffer, arr);
+
+	free(arr);
+
 	return 0;
 }
