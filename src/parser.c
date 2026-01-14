@@ -472,6 +472,19 @@ static int parseCallArg(TokenC *tokens, BufferI *buffer) {
 	return nargs;
 }
 
+/*
+ *
+ *
+ *
+ *
+ * BLOQUE PARA RECORDAR QUE DELANTE ESTA PARSE_PROTOTYPE
+ *
+ *
+ *
+ *
+ *
+ */
+
 static int parsePrototype(TokenC *tokens, BufferI *buffer) {
 	// IDK, solo hacer eso
 	return 0;
@@ -680,6 +693,18 @@ static int parseIdentifier(TokenC *tokens, BufferI *buffer) {
 		buffer->emitText(buffer, "sub eax, ecx\n");
 		buffer->emitText(buffer, "pop ecx\n");
 		buffer->emitText(buffer, "mov Meax, ecx\n");
+
+		free(arr);
+	} else if (peek(tokens)->type == C_TOKEN_COLON) { // definición label
+		eat(tokens);
+		char *arr = (char*)malloc(identifier->len+2);
+		memcpy(arr, identifer->start, identifier->len);
+		arr[identifier->len]='\n';
+		arr[identifier->len+1]='\0';
+
+		//emitimos la etiqueta
+		buffer->emitText(buffer, ".label ");
+		buffer->emitText(buffer, arr);
 
 		free(arr);
 	} else {
