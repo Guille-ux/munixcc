@@ -21,6 +21,7 @@ static int parseIdentifier(TokenC *tokens, BufferI *buffer);
 static int parseFunctionDeclaration(TokenC *tokens, BufferI *buffer);
 static int parseReturn(TokenC *tokens, BufferI *buffer);
 static int parseWhile(TokenC *tokens, BufferI *buffer);
+static int parseGoto(TokenC *tokens, BufferI *buffer);
 
 // definiciones para parseo de expresiones
 static int parseExpression(TokenC *tokens, BufferI *buffer);
@@ -106,6 +107,7 @@ static int parseStatement(TokenC *tokens, BufferI *buffer) {
 			return parseIdentifier(tokens, buffer);
 		case C_TOKEN_RETURN: return parseReturn(tokens, buffer);
 		case C_TOKEN_WHILE: return parseWhile(tokens, buffer);
+		case C_TOKEN_GOTO: return parseGoto(tokens, buffer);
 		default: break; // BRUH, NO SE NADA
 	}
 	return -1; // no deberia haber llegado hasta aqui
@@ -856,5 +858,24 @@ static int parseWhile(TokenC *tokens, BufferI *buffer) {
 	free(arr);
 	return 0;
 }
+// los goto's !!!
+static int parseGoto(TokenC *tokens, BufferI *buffer) {
+	// es bastante sencillo, primero hay que pillar el identifier
+	// que es la etiqueta
+	eat(tokens);
+	TokenC *tok = eat(tokens); // ahora pillamos la etiqueta
+	
+	char *arr = (char*)malloc(tok->len+2);
+	memcpy(arr, tok->start, tok->len);
+	arr[tok->len] = '\n';
+	arr[tok->len+1] = '\0';
 
+	// ahora emitimos la carga de la etiqueta a eax
+	buffer->emitText(buffer, "loax ");
+	buffer->emitText(buffer, arr);
 
+	// ahora emitimos el salto a eax
+	buffer->emitText(buffer, "jmp eax\n");
+	
+	return 0;
+}
