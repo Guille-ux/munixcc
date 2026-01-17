@@ -1,6 +1,8 @@
 #include "../include/compat.h"
 #include "../include/parser.h"
 
+// VERSION PARA NASM
+
 // TODO: añadir manejo de errores, acabar el resto de cosas
 
 char *name_base;
@@ -185,36 +187,36 @@ static int parseLogical(TokenC *tokens, BufferI *buffer) {
 				buffer->emitText(buffer, "cmp ecx, eax\n");
 				// mueve a eax 1 en caso de que sean iguales
 				// (flag 0 activa)
-				buffer->emitText(buffer, "cmovz eax, 0d1\n");
+				buffer->emitText(buffer, "cmovz eax, 1\n");
 				break;
 			case C_TOKEN_LESS:
 				// comparamos usando cmp
 				buffer->emitText(buffer, "cmp ecx, eax\n");
 				// ahora movemos si eax era mayor
 				// (la resta dio negativo)
-				buffer->emitText(buffer, "cmovl eax, 0d1\n");
+				buffer->emitText(buffer, "cmovl eax, 1\n");
 				break;
 			case C_TOKEN_GREATER:
 				// comparamos usando cmp
 				buffer->emitText(buffer, "cmp ecx, eax\n");
 				// ahora movemos 1 a ecx si era mayor
 				// la resta dio positivo
-				buffer->emitText(buffer, "cmovg eax, 0d1\n");
+				buffer->emitText(buffer, "cmovg eax, 1\n");
 				break;
 			case C_TOKEN_NOT_EQUAL:
 				// comparamos con cmp
 				buffer->emitText(buffer, "cmp ecx, eax\n");
 				// ahora movemos 1 a ecx si no son iguales
 				// (si la resta no da 0)
-				buffer->emitText(buffer, "cmovnz eax, 0d1\n");
+				buffer->emitText(buffer, "cmovnz eax, 1\n");
 				break;
 			case C_TOKEN_LESS_EQUAL:
 				// primero comparamos
 				buffer->emitText(buffer, "cmp ecx, eax\n");
 				// movemos si son iguales a ecx
-				buffer->emitText(buffer, "cmovz ecx, 0d1\n");
+				buffer->emitText(buffer, "cmovz ecx, 1\n");
 				// movemos si eax menor a eax
-				buffer->emitText(buffer, "cmovl eax, 0d1\n");
+				buffer->emitText(buffer, "cmovl eax, 1\n");
 				// hacemos or
 				buffer->emitText(buffer, "or eax, ecx\n");
 				break;
@@ -222,9 +224,9 @@ static int parseLogical(TokenC *tokens, BufferI *buffer) {
 				// primero comparamos
 				buffer->emitText(buffer, "cmp ecx, eax\n");
 				// movemos si son iguales a ecx
-				buffer->emitText(buffer, "cmovz ecx, 0d1\n");
+				buffer->emitText(buffer, "cmovz ecx, 1\n");
 				// movemos 1 a eax si eax > ecx
-				buffer->emitText(buffer, "cmovl eax, 0d1\n");
+				buffer->emitText(buffer, "cmovl eax, 1\n");
 				// hacemos or
 				buffer->emitText(buffer, "or eax, ecx\n");
 				break;
@@ -250,7 +252,8 @@ static int parseAdditive(TokenC *tokens, BufferI *buffer) {
 		if (parseMultiplicative(tokens, buffer)!=0) /* ERROR */;
 		
 		// extraemos el operando izquierdo del stack
-		buffer->emitText(buffer, "pop ecx\n");
+		buffer->emitText(buffer, "pop ebx\n");
+		buffer->emitText(buffer, "mov ecx, eax\n");
 		
 		// recuerda que el resultado debe acabar en eax
 		switch (tok->type) {
@@ -267,15 +270,11 @@ static int parseAdditive(TokenC *tokens, BufferI *buffer) {
 				break;
 			case C_TOKEN_RIGHT_SHIFT:
 				// hacemos shift hacia derecha
-				buffer->emitText(buffer, "shr ecx, eax\n");
-				// movemos el resultado a eax
-				buffer->emitText(buffer, "mov eax, ecx\n");
+				buffer->emitText(buffer, "shr ebx, cl\n");
 				break;
 			case C_TOKEN_LEFT_SHIFT:
 				// hacemos shift a la izquierda
-				buffer->emitText(buffer, "shl ecx, eax\n");
-				// movemos resultado a eax
-				buffer->emitText(buffer, "mov eax, ecx\n");
+				buffer->emitText(buffer, "shl ebx, cl\n");
 				break;
 		}
 
@@ -318,7 +317,7 @@ static int parseMultiplicative(TokenC *tokens, BufferI *buffer) {
 				// entonces, usaria CDQ si lo tuviese
 				// pero no lo tengo
 				buffer->emitText(buffer, "mov edx, eax\n");
-				buffer->emitText(buffer, "sar edx, 0d31\n");
+				buffer->emitText(buffer, "sar edx, 31\n");
 				// ahora ya podemos dividir
 				buffer->emitText(buffer, "idiv ecx\n");
 				break;
@@ -330,7 +329,7 @@ static int parseMultiplicative(TokenC *tokens, BufferI *buffer) {
 				buffer->emitText(buffer, "pop ecx\n");
 				// ahora tenemos que preparar edx
 				buffer->emitText(buffer, "mov edx, eax\n");
-				buffer->emitText(buffer, "sar edx, 0d31\n");
+				buffer->emitText(buffer, "sar edx, 31\n");
 				// ahora dividimos
 				buffer->emitText(buffer, "idiv ecx\n");
 				// y ahora, finalmente movemos el resto a eax
@@ -347,7 +346,7 @@ static int parseUnary(TokenC *tokens, BufferI *buffer) {
 	switch (tok->type) {
 		case C_TOKEN_STAR: // desreferenciación
 			// movemos el contenido de la dirección de eax en eax
-			buffer->emitText(buffer, "mov eax, Meax\n");
+			buffer->emitText(buffer, "mov eax, [eax]\n");
 			break;
 		case C_TOKEN_SUB: // cambiarle signo
 			// solo usamos neg y ya
@@ -469,6 +468,7 @@ static int parseCallArg(TokenC *tokens, BufferI *buffer) {
 		} else {
 			if (parseExpression(tokens, buffer)!=0) {
 				// ERROR
+				return -1;
 			}
 			buffer->emitText(buffer, "push eax\n");
 		}
@@ -523,20 +523,23 @@ static int parseIf(TokenC *tokens, BufferI *buffer) {
 	memcpy(&arr[10], name_base, 15);
 	memcpy(&arr[25], "IF\n", 4);	// cifras, + 2 de L_ y + 1 de '\0'
 
-	buffer->emitText(buffer, "loax ");
+	buffer->emitText(buffer, "mov ecx, ");
 	buffer->emitText(buffer, arr);
-	buffer->emitText(buffer, "mov ecx, eax\n"); // guardamos el valor
 	memcpy(&arr[25], "ELSE\n", 6);
-	buffer->emitText(buffer, "loax ");
+	buffer->emitText(buffer, "mov eax, ");
 	buffer->emitText(buffer, arr);
 
 	buffer->emitText(buffer, "pop ebx\n"); // preparar la comparación
-	buffer->emitText(buffer, "mov edx, 0d1\n");
-	buffer->emitText(buffer, "cmp edx, ebx\n"); // comparamo
+	buffer->emitText(buffer, "cmp ebx, 1\n"); // comparamo
 	
 	buffer->emitText(buffer, "cmovz eax, ecx\n"); // movemos si true
 	
 	buffer->emitText(buffer, "jmp eax\n");
+	
+	memcpy(&arr[25], "IF", 3);
+	
+	buffer->emitText(buffer, arr);
+	buffer->emitText(buffer, ":\n");
 
 	if (parseStatement(tokens, buffer)!=0) {
 		// ERROR
@@ -555,14 +558,14 @@ static int parseIf(TokenC *tokens, BufferI *buffer) {
 	memcpy(&arr[25], "END\n", 5);
 
 	// AHORA HACEMOS SALTO AL FIN, de hecho, creo que haremos primero
-	buffer->emitText(buffer, "loax ");
+	buffer->emitText(buffer, "mov eax, ");
 	buffer->emitText(buffer, arr);
 	buffer->emitText(buffer, "jmp eax\n"); // hacemos salto a eax
 
 	// AHORA USAMOS ELSE
-	memcpy(&arr[25], "ELSE\n", 6);
-	buffer->emitText(buffer, ".label "); // creamos etiqueta
+	memcpy(&arr[25], "ELSE", 5);
 	buffer->emitText(buffer, arr);
+	buffer->emitText(buffer, ":\n");
 
 	// TRABAJAMOS CON LA ETIQUETA ELSE, si no hay else, sigue siendo
 	// necesario, asi es más fácil
@@ -576,9 +579,9 @@ static int parseIf(TokenC *tokens, BufferI *buffer) {
 
 
 	// YA ACABAMOS CON ELSE, AHORA TOCA END
-	memcpy(&arr[25], "END\n", 5);
-	buffer->emitText(buffer, ".label "); // creamos la etiqueta
+	memcpy(&arr[25], "END", 4);
 	buffer->emitText(buffer, arr);
+	buffer->emitText(buffer, ":\n");
 	// trabajamos con la etiqueta end
 
 
@@ -622,16 +625,14 @@ static int parseDeclaration(TokenC *tokens, BufferI *buffer) {
 		if (peek(tokens)->type == C_TOKEN_LEFT_PAREN) {
 			// es una función, hacemos nuestras cosas....
 			// solo tenemos que devolver lo que haga el parser 
-			buffer->emitText(buffer, ".label ");
 			buffer->emitText(buffer, var.name);
-			buffer->emitText(buffer, "\n");
+			buffer->emitText(buffer, ":\n");
 			
 			return parseFunctionDeclaration(tokens, buffer);
 		} else {
 			// variable normal
-			buffer->emitText(buffer, ".label ");
 			buffer->emitText(buffer, var.name);
-			buffer->emitText(buffer, "\n");
+			buffer->emitText(buffer, ":\n");
 			if (peek(tokens)->type == C_TOKEN_LEFT_BRACKET) {
 				tok_index++;
 				char *arr = (char*)malloc(64);
@@ -646,9 +647,9 @@ static int parseDeclaration(TokenC *tokens, BufferI *buffer) {
 					return -1;
 				}
 				memcpy(arr, tok->start, tok->len);
-				buffer->emitText(buffer, "%times ");
+				buffer->emitText(buffer, "times ");
 				buffer->emitText(buffer, arr);
-				buffer->emitText(buffer, " 0d0\n");
+				buffer->emitText(buffer, " db 0");
 				free(arr);
 			} else {
 				buffer->emitText(buffer, "dd 0x0\n")
@@ -693,21 +694,19 @@ static int parseIdentifier(TokenC *tokens, BufferI *buffer) {
 		buffer->emitText(buffer, "push eax\n"); // empujar para no perder
 		buffer->emitText(buffer, "mov ecx, ");
 		buffer->emitText(buffer, int2char(arr, 64, var->offset));
-		buffer->emitText(buffer, "mov eax, ebp\n");
-		buffer->emitText(buffer, "sub eax, ecx\n");
-		buffer->emitText(buffer, "pop ecx\n");
-		buffer->emitText(buffer, "mov Meax, ecx\n");
+		buffer->emitText(buffer, "pop ebx\n");
+		buffer->emitText(buffer, "mov [ebp - ecx], ebx\n");
 
 		free(arr);
 	} else if (peek(tokens)->type == C_TOKEN_COLON) { // definición label
 		eat(tokens);
-		char *arr = (char*)malloc(identifier->len+2);
+		char *arr = (char*)malloc(identifier->len+3);
 		memcpy(arr, identifer->start, identifier->len);
-		arr[identifier->len]='\n';
-		arr[identifier->len+1]='\0';
+		arr[identifier->len]=':';
+		arr[identifier->len+1]='\n';
+		arr[identifier->len+2]='\0';
 
 		//emitimos la etiqueta
-		buffer->emitText(buffer, ".label ");
 		buffer->emitText(buffer, arr);
 
 		free(arr);
@@ -798,11 +797,11 @@ static int parseWhile(TokenC *tokens, BufferI *buffer) {
 	arr[0] = 'L';
 	int2char(arr, 9, label++); // el 9 esta ahi porque permito hasta 6
 	memcpy(&arr[10], name_base, 15);
-	memcpy(&arr[25], "WHILE\n", 7);
+	memcpy(&arr[25], "WHILE", 6);
 
 	// creamos la etiqueta
-	buffer->emitText(buffer, ".label ");
 	buffer->emitText(buffer, arr);
+	buffer->emitText(buffer, ":\n");
 
 	// parseamos la condición
 	if (parseExpression(tokens, buffer)!=0) {
@@ -814,13 +813,12 @@ static int parseWhile(TokenC *tokens, BufferI *buffer) {
 	// preparamos etiqueta
 	memcpy(&arr[25], "BODY\n", 6);
 	
-	buffer->emitText(buffer, "loax ");
+	buffer->emitText(buffer, "mov ebx, ");
 	buffer->emitText(buffer, arr);
-	buffer->emitText(buffer, "mov ebx, eax\n");
 	// cargamos etiqueta de inicio
 	// preparamos una etiqueta que usaremos ahora
 	memcpy(&arr[25], "END\n", 5);
-	buffer->emitText(buffer, "loax ");
+	buffer->emitText(buffer, "mov eax, ");
 	buffer->emitText(buffer, arr);
 	// comparamos...
 	// preparación.....
@@ -834,9 +832,9 @@ static int parseWhile(TokenC *tokens, BufferI *buffer) {
 	// ahora saltamos
 	buffer->emitText(buffer, "jmp eax\n");
 
-	memcpy(&arr[25], "BODY\n", 6);
-	buffer->emitText(buffer, ".label ");
+	memcpy(&arr[25], "BODY", 6);
 	buffer->emitText(buffer, arr);
+	buffer->emitText(buffer, ":\n");
 
 	// ahora ponemos el cuerpo del bucle
 	if (parseStatement(tokens, buffer)!=0) {
@@ -847,15 +845,15 @@ static int parseWhile(TokenC *tokens, BufferI *buffer) {
 	// un loax y un salto, pero nada más, tambien toca crear la etiqueta
 	// del final
 	memcpy(&arr[25], "WHILE\n", 7);
-	buffer->emitText(buffer, "loax ");
+	buffer->emitText(buffer, "mov eax, ");
 	buffer->emitText(buffer, arr);
 
 	// ahora, toca saltar
 	buffer->emitText(buffer, "jmp eax\n");
 	// ahora creamos etiqueta del final
-	memcpy(&arr[25], "END\n", 5);
-	buffer->emitText(buffer, ".label ");
+	memcpy(&arr[25], "END", 5);
 	buffer->emitText(buffer, arr);
+	buffer->emitText(buffer, ":\n");
 	
 	free(arr);
 	return 0;
@@ -873,7 +871,7 @@ static int parseGoto(TokenC *tokens, BufferI *buffer) {
 	arr[tok->len+1] = '\0';
 
 	// ahora emitimos la carga de la etiqueta a eax
-	buffer->emitText(buffer, "loax ");
+	buffer->emitText(buffer, "mov eax, ");
 	buffer->emitText(buffer, arr);
 
 	// ahora emitimos el salto a eax
