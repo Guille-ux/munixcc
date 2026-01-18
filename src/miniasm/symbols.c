@@ -92,24 +92,28 @@ size_t handle_address(TokenC *tokens, BufferI *buffer) {
 	memcpy(tmp, tok->start, tok->len);
 	tmp[tok->len] = '\0';
 
+	var = mcc_find_var(tmp);
+
+	if (var==NULL) {
+		goto if_name_not_found;
+	}
+
 	if (var->is_ptr) {
 		isf = true;
 	} else {
 		isf = false;
 	}
 
-	var = mcc_find_var(tmp);
+	
 	size_t size = var->size;
 
-	free(tmp);
-
 	if (var->global) {
+		if_name_not_found:
 		buffer->emitText(buffer, "loax ");
 		char *tmp = (char*)malloc(MCC_MAX_SYMBOL_NAME+2);
 		tmp[MCC_MAX_SYMBOL_NAME] = '\n';
 		tmp[MCC_MAX_SYMBOL_NAME+1] = '\0';
 		buffer->emitText(buffer, tmp);
-		free(tmp);
 	} else {
 
 		buffer->emitText(buffer, "mov eax, ebp\n");
@@ -122,6 +126,8 @@ size_t handle_address(TokenC *tokens, BufferI *buffer) {
 		buffer->emitText(buffer, "sub eax, ecx\n");
 		
 	}
+
+	free(tmp);
 
 	return size;
 }

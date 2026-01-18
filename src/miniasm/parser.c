@@ -490,6 +490,35 @@ static int parseCallArg(TokenC *tokens, BufferI *buffer) {
 
 static int parsePrototype(TokenC *tokens, BufferI *buffer) {
 	// IDK, solo hacer eso
+	eat(tokens);
+	TokenC *dat = eat(tokens);
+	MCC_Var var;
+
+	var.is_ptr = false;
+	memcpy(&var.name, dat->start, dat->len);
+	memcpy(&var._type_, type->start, type->len);
+	var.name[MCC_MAX_SYMBOL_NAME-1] = '\0';
+	var._type_[MCC_MAX_SYMBOL_NAME-1] = '\0';
+
+	if (CVarTable.current_scope < 1) {
+		// es global!
+		if (peek(tokens)->type == C_TOKEN_LEFT_PAREN) {
+			// función, aqui no tenemos que poner los args
+			// solo el nombre y los paréntesis
+			eat(tokens);
+			if (eat(tokens)->type != C_TOKEN_RIGHT_PAREN) {
+				// ERROR!
+				return -1;
+			}
+			var.is_ptr = false;
+		}
+		mcc_add_g(var);
+	} else {
+		// no es global, espera, eso es imposible!
+		// ERROR!
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -607,7 +636,6 @@ static int parseDeclaration(TokenC *tokens, BufferI *buffer) {
 	TokenC *type = eat(tokens);
 	TokenC *dat = eat(tokens);
 	MCC_Var var;
-	var.size = 4;
 
 	memcpy(&var.name, dat->start, dat->len);
 	memcpy(&var._type_, type->start, type->len);
@@ -624,6 +652,9 @@ static int parseDeclaration(TokenC *tokens, BufferI *buffer) {
 			buffer->emitText(buffer, ".label ");
 			buffer->emitText(buffer, var.name);
 			buffer->emitText(buffer, "\n");
+
+			var.is_ptr = true;
+			mcc_add_g(var);
 			
 			return parseFunctionDeclaration(tokens, buffer);
 		} else {
@@ -657,6 +688,7 @@ static int parseDeclaration(TokenC *tokens, BufferI *buffer) {
 	} else {
 		// entonces no es global, estamos dentro de algun scope
 		// aqui usamos la tabla normal, CVarTable, aqui solo es un var
+		var.size = 4;
 		mcc_push_var(var);
 	}
 	tok_index--; // restauramos el indice

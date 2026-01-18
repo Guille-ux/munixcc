@@ -91,16 +91,16 @@ size_t handle_address(TokenC *tokens, BufferI *buffer) {
 	memcpy(tmp, tok->start, tok->len);
 	tmp[tok->len] = '\0';
 
+	var = mcc_find_var(tmp);
+	
+
 	if (var->is_ptr) {
 		isf = true;
 	} else {
 		isf = false;
 	}
 
-	var = mcc_find_var(tmp);
-	size_t size = var->size;
-
-	free(tmp);
+	size_t size = var->size;	
 
 	if (var->global) {
 		buffer->emitText(buffer, "mov eax, ");
@@ -108,7 +108,6 @@ size_t handle_address(TokenC *tokens, BufferI *buffer) {
 		tmp[MCC_MAX_SYMBOL_NAME] = '\n';
 		tmp[MCC_MAX_SYMBOL_NAME+1] = '\0';
 		buffer->emitText(buffer, tmp);
-		free(tmp);
 	} else {
 		char *arr = (char*)malloc(64);
 		buffer->emitText(buffer, "mov ecx, [ebp - ");
@@ -116,6 +115,7 @@ size_t handle_address(TokenC *tokens, BufferI *buffer) {
 		buffer->emitText(buffer, "]\n");
 		free(arr);
 	}
+	free(tmp);
 
 	return size;
 }
