@@ -57,10 +57,11 @@ int mcc_parse_program(TokenC *tokens, BufferI *buffer) {
 	CVarTable.current_scope = 0;
 	CVarTable.symbol_count = 0;
 
-	while (tokens[i].type!=TOKEN_EOF) {
+	while (tokens[tok_index].type!=C_TOKEN_EOF) {
 		// llamamos a parse statement
 		if (parseStatement(tokens, buffer) != 0) {
 			// ERROR!
+			return -1;
 		}
 	}
 	return 0;	
@@ -118,7 +119,7 @@ static int parseStatement(TokenC *tokens, BufferI *buffer) {
 // las 3 funciones para expresiones aritméticas
 
 static int parseExpression(TokenC *tokens, BufferI *buffer) {
-	return parseLogical(TokenC *tokens, BufferI *buffer);
+	return parseLogical(tokens, buffer);
 }
 
 

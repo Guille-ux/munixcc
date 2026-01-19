@@ -10,7 +10,7 @@
 #include "structs.h"
 #include "utils.h"
 #include "symbols.h"
-#include "bufferi.h"
+#include "buffi.h"
 
 extern char *name_base; // máximo 15 chars, (sin contar con '\0')
 
