@@ -435,7 +435,7 @@ static int parsePrimary(TokenC *tokens, BufferI *buffer) {
 		char *arr;
 		// OH, estamos ante una llamada a función
 		buffer->emitText(buffer, "push eax\n");
-		int nargs = parseCallArg(TokenC *tokens, BufferI *buffer);
+		int nargs = parseCallArg(tokens, buffer);
 		buffer->emitText(buffer, "mov eax, "); 
 		arr = (char*)malloc(64);
 		buffer->emitText(buffer, int2char(arr, 64, nargs*4));
@@ -497,7 +497,6 @@ static int parsePrototype(TokenC *tokens, BufferI *buffer) {
 
 	var.is_ptr = false;
 	memcpy(&var.name, dat->start, dat->len);
-	memcpy(&var._type_, type->start, type->len);
 	var.name[MCC_MAX_SYMBOL_NAME-1] = '\0';
 	var._type_[MCC_MAX_SYMBOL_NAME-1] = '\0';
 
@@ -622,7 +621,7 @@ static int parseScope(TokenC *tokens, BufferI *buffer) {
 	while (peek(tokens)->type != C_TOKEN_RIGHT_BRACE) {
 		if (parseStatement(tokens, buffer)!=0) {
 			// ERROR
-			return -1
+			return -1;
 		}
 	}
 	CVarTable.current_scope--;
@@ -682,7 +681,7 @@ static int parseDeclaration(TokenC *tokens, BufferI *buffer) {
 				buffer->emitText(buffer, " 0d0\n");
 				free(arr);
 			} else {
-				buffer->emitText(buffer, "dd 0x0\n")
+				buffer->emitText(buffer, "dd 0x0\n");
 			}
 			mcc_add_g(var);
 		}
@@ -734,7 +733,7 @@ static int parseIdentifier(TokenC *tokens, BufferI *buffer) {
 	} else if (peek(tokens)->type == C_TOKEN_COLON) { // definición label
 		eat(tokens);
 		char *arr = (char*)malloc(identifier->len+2);
-		memcpy(arr, identifer->start, identifier->len);
+		memcpy(arr, identifier->start, identifier->len);
 		arr[identifier->len]='\n';
 		arr[identifier->len+1]='\0';
 
@@ -777,7 +776,7 @@ static int parseFunctionDeclaration(TokenC *tokens, BufferI *buffer) {
 	// ahora vienen argumentos
 	// primero preparamos algo...
 	CVarTable.current_scope = 1;
-	CVarTable.stack_offset = 8;// es así porque - 0 esta ocupado
+	CVarTable.current_stack_offset = 8;// es así porque - 0 esta ocupado
 				   // por el anterior ebp
 				   // y el - 4 esta ocupado por la dirección
 				   // de return
@@ -795,7 +794,7 @@ static int parseFunctionDeclaration(TokenC *tokens, BufferI *buffer) {
 
 	// despues de eso reseteamos algunas cosas...
 	CVarTable.current_scope = 0;
-	CVarTable.stack_offset = 0; // importante
+	CVarTable.current_stack_offset = 0; // importante
 	if (0!=parseStatement(tokens, buffer)) {// aunque debería poner scope
 					       // de todas formas
 					       // lo dejo así
@@ -842,7 +841,7 @@ static int parseWhile(TokenC *tokens, BufferI *buffer) {
 		return -1;
 	}
 	// empujamos eax para no perder su valor
-	buffer->emitText("push eax\n");
+	buffer->emitText(buffer, "push eax\n");
 	// preparamos etiqueta
 	memcpy(&arr[25], "BODY\n", 6);
 	

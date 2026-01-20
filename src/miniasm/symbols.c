@@ -1,4 +1,5 @@
 #include "../include/symbols.h"
+#include "../include/parser.h"
 
 MCC_g_Table CGlobalTable;
 MCC_VarTable CVarTable;
@@ -62,7 +63,7 @@ int handle_identifier(TokenC *tokens, BufferI *buffer) {
 	handle_address(tokens, buffer);
 	buffer->emitText(buffer, "mov edx, 0d1\n");
 	buffer->emitText(buffer, "mov ecx, Meax\n");
-	TokenC *tok = eat(tokens);
+	TokenC *tok = &tokens[tok_index++];
 	if (tok->type == C_TOKEN_POSTFIX_ADD) {
 		buffer->emitText(buffer, "mov ebx, Meax\n");
 		buffer->emitText(buffer, "add ebx, edx\n");
@@ -85,7 +86,7 @@ int handle_identifier(TokenC *tokens, BufferI *buffer) {
 // lo siento operadores prefix
 size_t handle_address(TokenC *tokens, BufferI *buffer) {
 	MCC_Var *var;
-	TokenC *tok = eat(tokens);
+	TokenC *tok = &tokens[tok_index++];
 	
 	// formateando el token
 	char *tmp = (char*)malloc(tok->len+1);
