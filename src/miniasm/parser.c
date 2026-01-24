@@ -103,15 +103,12 @@ static int parseStatement(TokenC *tokens, BufferI *buffer) {
 		case C_TOKEN_VOID:
 			// cosas para declaraciones, digo, es diferente no?
 			return parseDeclaration(tokens, buffer);
-		case C_TOKEN_IDENTIFIER:
-			// gestiona asignaciones y llamadas a funciones que
-			// van fuera de una expresión
-			return parseIdentifier(tokens, buffer);
 		case C_TOKEN_RETURN: return parseReturn(tokens, buffer);
 		case C_TOKEN_WHILE: return parseWhile(tokens, buffer);
 		case C_TOKEN_GOTO: return parseGoto(tokens, buffer);
 		case C_TOKEN_ASM: return parseAsm(tokens, buffer);
-		default: break; // BRUH, NO SE NADA
+		default:
+			return parseIdentifier(tokens, buffer);
 	}
 	return -1; // no deberia haber llegado hasta aqui
 }
@@ -702,34 +699,28 @@ static int parseIdentifier(TokenC *tokens, BufferI *buffer) {
 	TokenC *identifier = eat(tokens);
 	
 	if (peek(tokens)->type == C_TOKEN_ASSIGN) {
-		MCC_Var *var;
-		char *arr = (char*)malloc(identifier->len+1);
-		memcpy(arr, identifier->start, identifier->len);
-		arr[identifier->len] = '\0';
-
-		var = mcc_find_var(arr); // ya tenemos la variable
-		free(arr);
-	
-		arr = (char*)malloc(64);	
-
+		if (parseExpression(tokens, buffer)!=0) {
+			// ERROR!
+			return -1;
+		}	
 	
 		// hacer una asignación, es decir, vamos a calcular la expresión
 		// luego pegarla en la variable
-		eat(tokens);
+		if (eat(tokens)->type != C_TOKEN_ASSIGN) {
+			// bueno, pues entonces solo era una expresión
+			tok_index--;
+			return 0;
+		}
+
+		buffer->emitText(buffer, "push eax\n");
+
 		if (0!=parseExpression(tokens, buffer)) {
 			// oh, no, hubo un error
 			// a tomar por saco
 			return -1;
 		}
-		buffer->emitText(buffer, "push eax\n"); // empujar para no perder
-		buffer->emitText(buffer, "mov ecx, ");
-		buffer->emitText(buffer, int2char(arr, 64, var->offset));
-		buffer->emitText(buffer, "mov eax, ebp\n");
-		buffer->emitText(buffer, "sub eax, ecx\n");
 		buffer->emitText(buffer, "pop ecx\n");
-		buffer->emitText(buffer, "mov Meax, ecx\n");
-
-		free(arr);
+		buffer->emitText(buffer, "mov Mecx, eax\n");
 	} else if (peek(tokens)->type == C_TOKEN_COLON) { // definición label
 		eat(tokens);
 		char *arr = (char*)malloc(identifier->len+2);
