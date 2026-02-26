@@ -682,7 +682,7 @@ static int parseDeclaration(TokenC *tokens, BufferI *buffer) {
 					tmp[2]='\'';
 					tmp[3]='\n';
 					tmp[4]='\0';
-					for (uint32_t i=val->start;i-val->start<val->len;i++) {
+					for (char *i=val->start;i-val->start<val->len;i++) {
 						buffer->emitText(buffer, "db ");
 						tmp[1] = *i;
 						buffer->emitText(buffer, tmp);
