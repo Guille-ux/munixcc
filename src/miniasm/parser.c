@@ -660,9 +660,7 @@ static int parseDeclaration(TokenC *tokens, BufferI *buffer) {
 			buffer->emitText(buffer, var.name);
 			buffer->emitText(buffer, "\n");
 			if (peek(tokens)->type == C_TOKEN_LEFT_BRACKET) {
-				tok_index++;
-				char *arr = (char*)malloc(64);
-				memset(arr, '\0', 64);
+				tok_index++;	
 				TokenC *tok = eat(tokens);
 				if (eat(tokens)->type != C_TOKEN_RIGHT_BRACKET) {
 					// ERROR!
@@ -672,13 +670,49 @@ static int parseDeclaration(TokenC *tokens, BufferI *buffer) {
 					// ERROR!
 					return -1;
 				}
-				memcpy(arr, tok->start, tok->len);
-				buffer->emitText(buffer, "%times ");
-				buffer->emitText(buffer, arr);
-				buffer->emitText(buffer, " 0d0\n");
-				free(arr);
+				TokenC *val = eat(tokens); 
+				if (val->type == C_TOKEN_ASSIGN) {
+					char tmp[5];
+					tmp[0]='\'';
+					tmp[2]='\'';
+					tmp[3]='\n';
+					tmp[4]='\0';
+					for (uint32_t i=val->start;i-val->start<val->len;i++) {
+						buffer->emitText(buffer, "db ");
+						tmp[1] = *i;
+						buffer->emitText(buffer, tmp);
+					}
+				} else {
+					char *arr = (char*)malloc(64);
+					memset(arr, '\0', 64);
+					memcpy(arr, tok->start, tok->len);
+					buffer->emitText(buffer, "%times ");
+					buffer->emitText(buffer, arr);
+					buffer->emitText(buffer, " 0d0\n");
+					free(arr);
+				}
 			} else {
-				buffer->emitText(buffer, "dd 0x0\n");
+				if (peek(tokens)->type == C_TOKEN_SEMICOLON) {
+					buffer->emitText(buffer, "dd 0x0\n");
+				} else {
+					tok_index++;
+					char *arr = (char*)malloc(64);
+					memset(arr, '\0', 64);
+					if (eat(tokens)->type != C_TOKEN_ASSIGN) {
+						// ERROR!
+						return -1;
+					}
+					TokenC *tok = eat(tokens);
+					if (tok->type != C_TOKEN_NUMBER) {
+						// ERROR!
+						return -1;
+					}
+					memcpy(arr, tok->start, tok->len);
+					buffer->emitText(buffer, "dd ");
+					buffer->emitText(buffer, arr);
+					buffer->emitText(buffer, "\n");
+					free(arr);
+				}	
 			}
 			mcc_add_g(var);
 		}
