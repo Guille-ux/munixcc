@@ -320,7 +320,7 @@ bool munixccLex(const char *text, TokenC *tokens, size_t max_tokens) {
 	size_t i=0;
 	TokenC tok;
 	memset(tokens, 0, sizeof(TokenC)*max_tokens);
-
+	cursor = (char*)text;
 	while (i < max_tokens-1) {
 		tok = getNextToken();
 		if (tok.type == C_TOKEN_WHITE_SPACE) continue;

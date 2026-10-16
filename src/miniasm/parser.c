@@ -137,8 +137,10 @@ static int parseExpression(TokenC *tokens, BufferI *buffer) {
 
 static int parseLogical(TokenC *tokens, BufferI *buffer) {
 	parseAdditive(tokens, buffer);
-	while  (peek(tokens)->type == C_TOKEN_AND || C_TOKEN_BYTEWISE_AND ||
-		peek(tokens)->type == C_TOKEN_OR || C_TOKEN_BYTEWISE_OR ||
+	while  (peek(tokens)->type == C_TOKEN_AND ||
+		peek(tokens)->type == C_TOKEN_BYTEWISE_AND ||
+		peek(tokens)->type == C_TOKEN_OR ||
+		peek(tokens)->type == C_TOKEN_BYTEWISE_OR ||
 		peek(tokens)->type == C_TOKEN_BYTEWISE_XOR ||
 		peek(tokens)->type == C_TOKEN_EQUAL ||
 		peek(tokens)->type == C_TOKEN_LESS ||
@@ -460,7 +462,7 @@ static int parseCallArg(TokenC *tokens, BufferI *buffer) {
 		if (tok->type == C_TOKEN_RIGHT_PAREN) {
 			nargs = (nargs > 1) ? nargs : 0;
 			break;
-		} else if (tok->type = C_TOKEN_COMMA) {
+		} else if (tok->type == C_TOKEN_COMMA) {
 			nargs++;
 		} else {
 			if (parseExpression(tokens, buffer)!=0) {

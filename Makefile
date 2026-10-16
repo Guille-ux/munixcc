@@ -17,7 +17,15 @@ OBJECTS = $(patsubst %.c, %.o, $(SOURCES))
 $(BUILD)/%.o: $(SRC)/%.c
 	$(CC) -c $(CFLAGS) $< -o $@
 
-.PHONY: all clean configure deconfigure
+.PHONY: all clean configure deconfigure help
+
+help:
+	@echo "COMMANDS"
+	@echo "configure ASSEMBLER=nasm/miniasm"
+	@echo "deconfigure"
+	@echo "all"
+	@echo "clean"
+
 
 $(TARGET_LIB): $(OBJECTS)
 	$(AR) $(ARFLAGS) $@ $^

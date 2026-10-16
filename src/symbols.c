@@ -61,20 +61,19 @@ MCC_Var *mcc_find_var(char *name) {
 
 int handle_identifier(TokenC *tokens, BufferI *buffer) {
 	handle_address(tokens, buffer);
-	buffer->emitText(buffer, "mov edx, 0d1\n");
-	buffer->emitText(buffer, "mov ecx, Meax\n");
+	buffer->emitText(buffer, "mov ecx, [eax]\n");
 	TokenC *tok = &tokens[tok_index++];
 	if (tok->type == C_TOKEN_POSTFIX_ADD) {
-		buffer->emitText(buffer, "mov ebx, Meax\n");
-		buffer->emitText(buffer, "add ebx, edx\n");
-		buffer->emitText(buffer, "mov Meax, ebx\n");
+		buffer->emitText(buffer, "mov ebx, ecx\n");
+		buffer->emitText(buffer, "add ebx, 1\n");
+		buffer->emitText(buffer, "mov [eax], ebx\n");
 	} else if (tok->type == C_TOKEN_POSTFIX_SUB) {
-		buffer->emitText(buffer, "mov ebx, Meax\n");
-		buffer->emitText(buffer, "sub ebx, edx\n");
-		buffer->emitText(buffer, "mov Meax, ebx\n");
+		buffer->emitText(buffer, "mov ebx, ecx\n");
+		buffer->emitText(buffer, "sub ebx, 1\n");
+		buffer->emitText(buffer, "mov [eax], ebx\n");
 	} else if (tok->type == C_TOKEN_LEFT_PAREN && isf) { // isf dice si es función global
-		buffer->emitText(buffer, "mov ecx, eax\n"); // importante
 		tok_index--;
+		return 0;
 	} else {
 		tok_index--;
 	}
@@ -94,10 +93,7 @@ size_t handle_address(TokenC *tokens, BufferI *buffer) {
 	tmp[tok->len] = '\0';
 
 	var = mcc_find_var(tmp);
-
-	if (var==NULL) {
-		goto if_name_not_found;
-	}
+	
 
 	if (var->is_ptr) {
 		isf = true;
@@ -105,29 +101,21 @@ size_t handle_address(TokenC *tokens, BufferI *buffer) {
 		isf = false;
 	}
 
-	
-	size_t size = var->size;
+	size_t size = var->size;	
 
 	if (var->global) {
-		if_name_not_found:
-		buffer->emitText(buffer, "loax ");
+		buffer->emitText(buffer, "mov eax, ");
 		char *tmp = (char*)malloc(MCC_MAX_SYMBOL_NAME+2);
 		tmp[MCC_MAX_SYMBOL_NAME] = '\n';
 		tmp[MCC_MAX_SYMBOL_NAME+1] = '\0';
 		buffer->emitText(buffer, tmp);
 	} else {
-
-		buffer->emitText(buffer, "mov eax, ebp\n");
 		char *arr = (char*)malloc(64);
-		buffer->emitText(buffer, "mov ecx, ");
+		buffer->emitText(buffer, "mov ecx, [ebp - ");
 		buffer->emitText(buffer, int2char(arr, 64, var->offset));
-		buffer->emitText(buffer, "\n"); // ya no es necesario, pero
-						// se queda
+		buffer->emitText(buffer, "]\n");
 		free(arr);
-		buffer->emitText(buffer, "sub eax, ecx\n");
-		
 	}
-
 	free(tmp);
 
 	return size;

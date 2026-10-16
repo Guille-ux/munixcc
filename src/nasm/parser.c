@@ -1,6 +1,20 @@
 #include "../include/compat.h"
 #include "../include/parser.h"
 
+#define DEBUG
+
+#ifdef DEBUG
+
+#include <stdio.h>
+
+#define ERROR(msg) printf("[DEBUG] %s\n", msg)
+
+#else
+
+#define ERROR(msg) (msg)
+
+#endif
+
 // VERSION PARA NASM
 
 // TODO: añadir manejo de errores, acabar el resto de cosas
@@ -63,6 +77,7 @@ int mcc_parse_program(TokenC *tokens, BufferI *buffer) {
 		// llamamos a parse statement
 		if (parseStatement(tokens, buffer) != 0) {
 			// ERROR!
+			ERROR("Error Here");
 			return -1;
 		}
 	}
@@ -96,22 +111,42 @@ int mcc_parse_program(TokenC *tokens, BufferI *buffer) {
 
 static int parseStatement(TokenC *tokens, BufferI *buffer) {
 	switch (peek(tokens)->type) {
-		case C_TOKEN_EXTERN: return parsePrototype(tokens, buffer);
-		case C_TOKEN_IF: return parseIf(tokens, buffer);
-		case C_TOKEN_LEFT_BRACE: return parseScope(tokens, buffer);
-		case C_TOKEN_RIGHT_BRACE: return 0; // IMPORTANTE
+		case C_TOKEN_EXTERN: 
+			ERROR("extern");
+			return parsePrototype(tokens, buffer);
+		case C_TOKEN_IF: 
+			ERROR("if");
+			return parseIf(tokens, buffer);
+		case C_TOKEN_LEFT_BRACE: 
+			ERROR("left brace");
+			return parseScope(tokens, buffer);
+		case C_TOKEN_RIGHT_BRACE:
+			ERROR("Right Brace");
+			return 0; // IMPORTANTE
 		case C_TOKEN_SEMICOLON: tok_index++; return 0;
+			ERROR("Semicolon");
 		case C_TOKEN_INT:
 		case C_TOKEN_VOID:
+			ERROR("Declaration");
 			// cosas para declaraciones, digo, es diferente no?
 			return parseDeclaration(tokens, buffer);
-		case C_TOKEN_RETURN: return parseReturn(tokens, buffer);
-		case C_TOKEN_WHILE: return parseWhile(tokens, buffer);
-		case C_TOKEN_GOTO: return parseGoto(tokens, buffer);
-		case C_TOKEN_ASM: return parseAsm(tokens, buffer);
+		case C_TOKEN_RETURN: 
+			ERROR("Return");
+			return parseReturn(tokens, buffer);
+		case C_TOKEN_WHILE: 
+			ERROR("while");
+			return parseWhile(tokens, buffer);
+		case C_TOKEN_GOTO: 
+			ERROR("goto");
+			return parseGoto(tokens, buffer);
+		case C_TOKEN_ASM: 
+			ERROR("Nasm");
+			return parseAsm(tokens, buffer);
 		default:
+			ERROR("Identifier Yk");
 			return parseIdentifier(tokens, buffer);
 	}
+	ERROR("IT WASNT NONE OF THEM!");
 	return -1; // no deberia haber llegado hasta aqui
 }
 
@@ -139,8 +174,10 @@ static int parseExpression(TokenC *tokens, BufferI *buffer) {
 
 static int parseLogical(TokenC *tokens, BufferI *buffer) {
 	parseAdditive(tokens, buffer);
-	while  (peek(tokens)->type == C_TOKEN_AND || C_TOKEN_BYTEWISE_AND ||
-		peek(tokens)->type == C_TOKEN_OR || C_TOKEN_BYTEWISE_OR ||
+	while  (peek(tokens)->type == C_TOKEN_AND ||
+		peek(tokens)->type == C_TOKEN_BYTEWISE_AND ||
+		peek(tokens)->type == C_TOKEN_OR ||
+		peek(tokens)->type == C_TOKEN_BYTEWISE_OR ||
 		peek(tokens)->type == C_TOKEN_BYTEWISE_XOR ||
 		peek(tokens)->type == C_TOKEN_EQUAL ||
 		peek(tokens)->type == C_TOKEN_LESS ||
@@ -461,7 +498,7 @@ static int parseCallArg(TokenC *tokens, BufferI *buffer) {
 		if (tok->type == C_TOKEN_RIGHT_PAREN) {
 			nargs = (nargs > 1) ? nargs : 0;
 			break;
-		} else if (tok->type = C_TOKEN_COMMA) {
+		} else if (tok->type == C_TOKEN_COMMA) {
 			nargs++;
 		} else {
 			if (parseExpression(tokens, buffer)!=0) {
@@ -748,7 +785,7 @@ static int parseIdentifier(TokenC *tokens, BufferI *buffer) {
 	
 		// hacer una asignación, es decir, vamos a calcular la expresión
 		// luego pegarla en la variable
-		if (eat(tokens)->type != C_TOKEN_ASSIGN); {
+		if (eat(tokens)->type != C_TOKEN_ASSIGN) {
 			// bueno, era una expresión normal
 			tok_index--;
 			return 0;
