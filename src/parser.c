@@ -121,10 +121,14 @@ static int parseStatement(TokenC *tokens, BufferI *buffer) {
 			ERROR("left brace");
 			return parseScope(tokens, buffer);
 		case C_TOKEN_RIGHT_BRACE:
+			tok_index++;
 			ERROR("Right Brace");
 			return 0; // IMPORTANTE
-		case C_TOKEN_SEMICOLON: tok_index++; return 0;
+		case C_TOKEN_SEMICOLON: 
 			ERROR("Semicolon");
+			tok_index++; 
+			return 0;
+
 		case C_TOKEN_INT:
 		case C_TOKEN_VOID:
 			ERROR("Declaration");
@@ -685,6 +689,7 @@ static int parseDeclaration(TokenC *tokens, BufferI *buffer) {
 
 
 	if (CVarTable.current_scope < 1) {
+		ERROR("Something Global");
 		// en este caso es algo global, va por la tabla de globales
 		// CGlobalTable, aqui podria ser una función
 		if (peek(tokens)->type == C_TOKEN_LEFT_PAREN) {
@@ -695,6 +700,8 @@ static int parseDeclaration(TokenC *tokens, BufferI *buffer) {
 			
 			var.is_ptr = true;
 			mcc_add_g(var);
+			
+			ERROR("Function Declaration!");
 
 			return parseFunctionDeclaration(tokens, buffer);
 		} else {
@@ -702,7 +709,7 @@ static int parseDeclaration(TokenC *tokens, BufferI *buffer) {
 			buffer->emitText(buffer, var.name);
 			buffer->emitText(buffer, ":\n");
 			if (peek(tokens)->type == C_TOKEN_LEFT_BRACKET) {
-			tok_index++;	
+				tok_index++;	
 				TokenC *tok = eat(tokens);
 				if (eat(tokens)->type != C_TOKEN_RIGHT_BRACKET) {
 					// ERROR!
@@ -856,12 +863,13 @@ static int parseFunctionDeclaration(TokenC *tokens, BufferI *buffer) {
 	while (1) {
 		if (peek(tokens)->type == C_TOKEN_RIGHT_PAREN) break;
 		if (peek(tokens)->type == C_TOKEN_COMMA) eat(tokens);
-		parseDeclaration(tokens, buffer);
+		if (0!=parseDeclaration(tokens, buffer)) return -1;
 		// ahora, modificamos sus valores
 		MCC_Var *current = &CVarTable.table[CVarTable.symbol_count];
 		// jijii, entonces, si el offset inicial era 0...
 		current->offset = (size_t)(-current->offset);
 	}
+	eat(tokens);
 
 	// despues de eso reseteamos algunas cosas...
 	CVarTable.current_scope = 0;
@@ -882,10 +890,12 @@ static int parseFunctionDeclaration(TokenC *tokens, BufferI *buffer) {
 
 static int parseReturn(TokenC *tokens, BufferI *buffer) {
 	eat(tokens);
+	ERROR("METIENDO EXPRESIÓN!");
 	if (parseExpression(tokens, buffer)!=0) {
 		// ERROR!
 		return -1;
 	}
+	ERROR("METIENDO SECUENCIA DE SALIDA");
 	buffer->emitText(buffer, "mov esp, ebp\n");
 	buffer->emitText(buffer, "pop ebp\n");
 	buffer->emitText(buffer, "ret\n");

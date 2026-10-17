@@ -1,6 +1,17 @@
 #include "../include/buffi.h"
 
 // Implementación para uno dinámico
+#ifdef DEBUG
+
+#include <stdio.h>
+
+#define ERROR(msg) printf("[DEBUG] %s\n", msg)
+
+#else
+
+#define ERROR(msg) (msg)
+
+#endif
 
 void munixcc_initDynamicBuffer(BufferI *buffer) {
 	buffer->buffer = (char*)malloc(MUNIXCC_BUFFER_START_CAP);
@@ -17,6 +28,7 @@ void MCC_freeDynBuff(BufferI *buffer) {
 }
 
 void MCC_emitDynText(BufferI *buffer, char *text) {
+	ERROR(text);
 	size_t len = strlen(text);
 	int correction = buffer->cap - (buffer->size + len);
 	if (correction < 1) {

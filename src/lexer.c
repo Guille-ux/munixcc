@@ -306,6 +306,7 @@ static TokenC getNextToken(void) {
 		if (munixccPattern("as")) return newTokC(start, cursor-start, g_line, C_TOKEN_AS); // nuevo token gente
 		else {
 			while (is_identifier_ch(*cursor++));
+			cursor--;
 			return newTokC(start, cursor-start, g_line, C_TOKEN_IDENTIFIER);
 		}
 	}

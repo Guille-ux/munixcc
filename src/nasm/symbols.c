@@ -31,13 +31,15 @@ void mcc_clean_tab(void) {
 	size_t removed = 0;
 	size_t restore_offset = 0;
 	MCC_Var *var;
-	for (size_t i=CVarTable.symbol_count-1;i>0;i--) {
+	if (CVarTable.symbol_count==0) goto skip_this;
+	for (size_t i=CVarTable.symbol_count;i>0;i--) {
 		var = &CVarTable.table[i];
 		if (var->nscope > CVarTable.current_scope) {
 			restore_offset += var->size;
 			removed++;
 		}
 	}
+	skip_this:
 	CVarTable.symbol_count -= removed;
 	CVarTable.current_stack_offset -= restore_offset;
 }

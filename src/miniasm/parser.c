@@ -97,7 +97,7 @@ static int parseStatement(TokenC *tokens, BufferI *buffer) {
 		case C_TOKEN_EXTERN: return parsePrototype(tokens, buffer);
 		case C_TOKEN_IF: return parseIf(tokens, buffer);
 		case C_TOKEN_LEFT_BRACE: return parseScope(tokens, buffer);
-		case C_TOKEN_RIGHT_BRACE: return 0; // IMPORTANTE
+		case C_TOKEN_RIGHT_BRACE: tok_index++; return 0; // IMPORTANTE
 		case C_TOKEN_SEMICOLON: tok_index++; return 0;
 		case C_TOKEN_INT:
 		case C_TOKEN_VOID:
@@ -812,12 +812,13 @@ static int parseFunctionDeclaration(TokenC *tokens, BufferI *buffer) {
 	while (1) {
 		if (peek(tokens)->type == C_TOKEN_RIGHT_PAREN) break;
 		if (peek(tokens)->type == C_TOKEN_COMMA) eat(tokens);
-		parseDeclaration(tokens, buffer);
+		if (0!=parseDeclaration(tokens, buffer)) return -1;
 		// ahora, modificamos sus valores
 		MCC_Var *current = &CVarTable.table[CVarTable.symbol_count];
 		// jijii, entonces, si el offset inicial era 0...
 		current->offset = (size_t)(-current->offset);
 	}
+	eat(tokens); // asi saltamos al siguiente token de una vez
 
 	// despues de eso reseteamos algunas cosas...
 	CVarTable.current_scope = 0;
